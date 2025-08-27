@@ -5,6 +5,14 @@ const trafficSchema = new mongoose.Schema({
     hitCount: { type: Number, default: 1 },
     userAgents: [{ type: String }],
     urls: [{ type: String }],
+    // New fields for better user tracking
+    deviceFingerprint: { type: String, index: true },
+    sessionId: { type: String, index: true },
+    ipHistory: [{ 
+        ip: String, 
+        timestamp: { type: Date, default: Date.now },
+        userAgent: String 
+    }],
     location: {
         country: { type: String },
         region: { type: String },
@@ -22,5 +30,9 @@ const trafficSchema = new mongoose.Schema({
 
 // Automatically delete logs older than 24h
 trafficSchema.index({ lastHit: 1 }, { expireAfterSeconds: 86400 });
+
+// Index for device fingerprint and session tracking
+trafficSchema.index({ deviceFingerprint: 1, lastHit: -1 });
+trafficSchema.index({ sessionId: 1, lastHit: -1 });
 
 module.exports = mongoose.model("Traffic", trafficSchema);

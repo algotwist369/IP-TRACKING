@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 const { MONGO_URI, PORT } = require("./config");
 
 const trafficRoutes = require("./routes/trafficRoutes");
@@ -12,6 +13,7 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(cors());
+app.use(cookieParser());
 
 // Pass io to routes
 app.use((req, res, next) => {
