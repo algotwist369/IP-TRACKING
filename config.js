@@ -1,4 +1,4 @@
 module.exports = {
-    MONGO_URI: "mongodb://127.0.0.1:27017/traffic-monitor",
-    PORT: 3000,
+    MONGO_URI: "mongodb+srv://infoalgotwist:b78TEY60PiRWYoS9@cluster0.kidgbtf.mongodb.net/traffic-monitor",
+    PORT: 3080,
 };
