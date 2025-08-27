@@ -1,9 +1,10 @@
 const mongoose = require("mongoose");
 
 const trafficSchema = new mongoose.Schema({
-    ip: { type: String, required: true },
-    userAgent: { type: String },
-    url: { type: String },
+    ip: { type: String, required: true, unique: true },
+    hitCount: { type: Number, default: 1 },
+    userAgents: [{ type: String }],
+    urls: [{ type: String }],
     location: {
         country: { type: String },
         region: { type: String },
@@ -13,10 +14,13 @@ const trafficSchema = new mongoose.Schema({
         timezone: { type: String },
         isp: { type: String }
     },
+    firstHit: { type: Date, default: Date.now },
+    lastHit: { type: Date, default: Date.now },
     createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
 });
 
 // Automatically delete logs older than 24h
-trafficSchema.index({ createdAt: 1 }, { expireAfterSeconds: 86400 });
+trafficSchema.index({ lastHit: 1 }, { expireAfterSeconds: 86400 });
 
 module.exports = mongoose.model("Traffic", trafficSchema);

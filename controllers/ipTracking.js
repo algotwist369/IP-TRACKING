@@ -43,13 +43,13 @@ const getIpLocation = async (ip) => {
     } catch (error) {
         console.error('Error fetching IP location:', error.message);
         return {
-            country: 'Error',
-            region: 'Error',
-            city: 'Error',
+            country: 'Unknown',
+            region: 'Unknown',
+            city: 'Unknown',
             lat: 0,
             lon: 0,
-            timezone: 'Error',
-            isp: 'Error'
+            timezone: 'Unknown',
+            isp: 'Unknown'
         };
     }
 };
@@ -61,24 +61,69 @@ const ipTracking = async (req, res) => {
         const userAgent = req.headers["user-agent"] || "";
         const url = req.headers.referer || "";
 
-        // Get location data for the IP
-        const location = await getIpLocation(ip);
-
-        const entry = await Traffic.create({ 
-            ip, 
-            userAgent, 
-            url, 
-            location 
-        });
-
-        // Send live update via socket
-        req.io.emit("new-visit", {
-            ip,
-            userAgent,
-            url,
-            location,
-            time: entry.createdAt,
-        });
+        // Check if IP already exists
+        let existingEntry = await Traffic.findOne({ ip });
+        
+        if (existingEntry) {
+            // IP exists, increment hit count and update
+            existingEntry.hitCount += 1;
+            existingEntry.lastHit = new Date();
+            existingEntry.updatedAt = new Date();
+            
+            // Add new user agent if not already present
+            if (userAgent && !existingEntry.userAgents.includes(userAgent)) {
+                existingEntry.userAgents.push(userAgent);
+            }
+            
+            // Add new URL if not already present
+            if (url && !existingEntry.urls.includes(url)) {
+                existingEntry.urls.push(url);
+            }
+            
+            // Update location if it was previously unknown
+            if (existingEntry.location.country === 'Unknown' || existingEntry.location.country === 'Error') {
+                const newLocation = await getIpLocation(ip);
+                existingEntry.location = newLocation;
+            }
+            
+            await existingEntry.save();
+            
+            // Send live update via socket
+            req.io.emit("new-visit", {
+                ip,
+                hitCount: existingEntry.hitCount,
+                userAgent,
+                url,
+                location: existingEntry.location,
+                time: existingEntry.lastHit,
+                isNew: false
+            });
+            
+        } else {
+            // New IP, get location and create entry
+            const location = await getIpLocation(ip);
+            
+            const newEntry = await Traffic.create({ 
+                ip, 
+                hitCount: 1,
+                userAgents: userAgent ? [userAgent] : [],
+                urls: url ? [url] : [],
+                location,
+                firstHit: new Date(),
+                lastHit: new Date()
+            });
+            
+            // Send live update via socket
+            req.io.emit("new-visit", {
+                ip,
+                hitCount: 1,
+                userAgent,
+                url,
+                location,
+                time: newEntry.lastHit,
+                isNew: true
+            });
+        }
 
         res.json({ status: "ok" });
     } catch (err) {
@@ -89,18 +134,10 @@ const ipTracking = async (req, res) => {
 
 const getReport = async (req, res) => {
     try {
-        const suspicious = await Traffic.aggregate([
-            {
-                $group: {
-                    _id: "$ip",
-                    hits: { $sum: 1 },
-                    lastHit: { $max: "$createdAt" },
-                    location: { $first: "$location" }
-                },
-            },
-            { $match: { hits: { $gt: 20 } } },
-            { $sort: { hits: -1 } },
-        ]);
+        const suspicious = await Traffic.find({ hitCount: { $gt: 20 } })
+            .sort({ hitCount: -1 })
+            .select('ip hitCount lastHit location userAgents urls');
+            
         res.json(suspicious);
     } catch (err) {
         res.status(500).json({ error: "report failed" });
@@ -112,30 +149,15 @@ const getLast24Hours = async (req, res) => {
     try {
         const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
         
-        const last24HoursData = await Traffic.aggregate([
-            {
-                $match: {
-                    createdAt: { $gte: twentyFourHoursAgo }
-                }
-            },
-            {
-                $group: {
-                    _id: "$ip",
-                    hits: { $sum: 1 },
-                    lastHit: { $max: "$createdAt" },
-                    firstHit: { $min: "$createdAt" },
-                    location: { $first: "$location" },
-                    userAgents: { $addToSet: "$userAgent" },
-                    urls: { $addToSet: "$url" }
-                }
-            },
-            {
-                $sort: { hits: -1 }
-            }
-        ]);
+        const last24HoursData = await Traffic.find({ 
+            lastHit: { $gte: twentyFourHoursAgo } 
+        })
+        .sort({ hitCount: -1 })
+        .select('ip hitCount firstHit lastHit location userAgents urls');
 
         res.json({
             totalUniqueIPs: last24HoursData.length,
+            totalHits: last24HoursData.reduce((sum, item) => sum + item.hitCount, 0),
             data: last24HoursData
         });
     } catch (err) {
