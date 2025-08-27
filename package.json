@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/algotwist369/WEB-IP-TRACKING-BACKEND#readme",
   "dependencies": {
+    "axios": "^1.11.0",
     "cloudinary": "^2.7.0",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
