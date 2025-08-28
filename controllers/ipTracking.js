@@ -199,18 +199,23 @@ const ipTracking = async (req, res) => {
             
             await existingEntry.save();
             
-            // Send live update via socket
-            req.io.emit("new-visit", {
+            // Send live update via socket with optimized data
+            const visitData = {
                 ip,
                 hitCount: existingEntry.hitCount,
-                userAgent,
-                url,
+                userAgent: userAgent ? userAgent.substring(0, 100) : '', // Truncate for performance
+                url: url ? url.substring(0, 200) : '', // Truncate for performance
                 location: existingEntry.location,
                 time: existingEntry.lastHit,
                 isNew: false,
                 isReturningUser: true,
-                previousIPs: existingEntry.ipHistory.length
-            });
+                previousIPs: existingEntry.ipHistory.length,
+                sessionId: existingEntry.sessionId,
+                deviceFingerprint: existingEntry.deviceFingerprint ? existingEntry.deviceFingerprint.substring(0, 50) : ''
+            };
+            
+            // Use room-based emission for better performance
+            req.io.to('admin-dashboard').emit("new-visit", visitData);
             
         } else {
             // New user, create entry
@@ -228,17 +233,22 @@ const ipTracking = async (req, res) => {
                 lastHit: new Date()
             });
             
-            // Send live update via socket
-            req.io.emit("new-visit", {
+            // Send live update via socket with optimized data
+            const visitData = {
                 ip,
                 hitCount: 1,
-                userAgent,
-                url,
+                userAgent: userAgent ? userAgent.substring(0, 100) : '', // Truncate for performance
+                url: url ? url.substring(0, 200) : '', // Truncate for performance
                 location,
                 time: newEntry.lastHit,
                 isNew: true,
-                isReturningUser: false
-            });
+                isReturningUser: false,
+                sessionId: newEntry.sessionId,
+                deviceFingerprint: newEntry.deviceFingerprint ? newEntry.deviceFingerprint.substring(0, 50) : ''
+            };
+            
+            // Use room-based emission for better performance
+            req.io.to('admin-dashboard').emit("new-visit", visitData);
         }
 
         console.log('IP tracking successful for IP:', ip);
