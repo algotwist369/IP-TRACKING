@@ -128,6 +128,12 @@ const getIpLocation = async (ip) => {
 
 const ipTracking = async (req, res) => {
     try {
+        console.log('IP tracking request received:', {
+            method: req.method,
+            headers: req.headers,
+            body: req.body
+        });
+        
         const ip = req.headers["x-forwarded-for"]?.split(",")[0] || req.socket.remoteAddress;
         const userAgent = req.headers["user-agent"] || "";
         const url = req.headers.referer || "";
@@ -235,10 +241,11 @@ const ipTracking = async (req, res) => {
             });
         }
 
-        res.json({ status: "ok" });
+        console.log('IP tracking successful for IP:', ip);
+        res.json({ status: "ok", ip: ip });
     } catch (err) {
         console.error('IP tracking error:', err);
-        res.status(500).json({ error: "logging failed" });
+        res.status(500).json({ error: "logging failed", details: err.message });
     }
 }
 
