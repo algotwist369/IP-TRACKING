@@ -97,7 +97,7 @@ mongoose.connect(MONGO_URI)
 
 // Socket.IO event handling with performance optimizations
 io.on("connection", (socket) => {
-    console.log("🔌 Client connected:", socket.id);
+    console.log("Client connected:", socket.id);
     
     // Join admin room for real-time updates
     socket.join('admin-dashboard');
