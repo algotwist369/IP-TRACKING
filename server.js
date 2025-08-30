@@ -59,10 +59,7 @@ const connectDB = async () => {
 
 
 connectDB();
-// ============================================================================
-// DATABASE MODELS
-// ============================================================================
-
+ 
 // Visit Schema
 const visitSchema = new mongoose.Schema({
     ip: {
@@ -89,6 +86,34 @@ const visitSchema = new mongoose.Schema({
         enum: ['high', 'medium', 'low', 'none'],
         default: 'none'
     },
+    // VPN and Proxy Detection
+    isVpn: {
+        type: Boolean,
+        default: false
+    },
+    isProxy: {
+        type: Boolean,
+        default: false
+    },
+    isTor: {
+        type: Boolean,
+        default: false
+    },
+    vpnProvider: String,
+    proxyType: String,
+    // Computer ID and Fingerprinting
+    computerId: String,
+    deviceFingerprint: String,
+    screenResolution: String,
+    colorDepth: Number,
+    platform: String,
+    language: String,
+    timezone: String,
+    hardwareConcurrency: Number,
+    maxTouchPoints: Number,
+    cookieEnabled: Boolean,
+    doNotTrack: Boolean,
+    // Additional tracking data
     timestamp: {
         type: Date,
         default: Date.now
@@ -108,6 +133,122 @@ function getRealIP(req) {
         req.connection.remoteAddress ||
         req.socket.remoteAddress ||
         (req.connection.socket ? req.connection.socket.remoteAddress : null);
+}
+
+// VPN and Proxy Detection
+async function detectVpnProxy(ip) {
+    try {
+        // Use multiple services for VPN detection
+        const vpnServices = [
+            // IPHub VPN detection
+            async () => {
+                try {
+                    const response = await axios.get(`https://v2.api.iphub.info/guest/ip/${ip}`, {
+                        timeout: 5000,
+                        headers: {
+                            'User-Agent': 'IP-Tracker/1.0'
+                        }
+                    });
+                    if (response.data && response.data.block !== undefined) {
+                        return {
+                            isVpn: response.data.block === 1,
+                            isProxy: response.data.block === 1,
+                            vpnProvider: response.data.block === 1 ? 'Detected by IPHub' : null
+                        };
+                    }
+                } catch (error) {
+                    console.log('IPHub VPN detection failed:', error.message);
+                }
+                return null;
+            },
+            
+            // IPQualityScore VPN detection (free tier)
+            async () => {
+                try {
+                    const response = await axios.get(`https://ipqualityscore.com/api/json/ip/YOUR_API_KEY/${ip}`, {
+                        timeout: 5000
+                    });
+                    if (response.data && response.data.success) {
+                        return {
+                            isVpn: response.data.vpn || response.data.proxy,
+                            isProxy: response.data.proxy,
+                            isTor: response.data.tor,
+                            vpnProvider: response.data.vpn ? 'Detected by IPQS' : null,
+                            proxyType: response.data.proxy ? response.data.proxy_type : null
+                        };
+                    }
+                } catch (error) {
+                    console.log('IPQualityScore VPN detection failed:', error.message);
+                }
+                return null;
+            },
+            
+            // Simple heuristic detection based on ISP
+            async () => {
+                try {
+                    const response = await axios.get(`http://ip-api.com/json/${ip}?fields=isp,org`, {
+                        timeout: 5000
+                    });
+                    if (response.data && response.data.status === 'success') {
+                        const isp = response.data.isp.toLowerCase();
+                        const org = response.data.org.toLowerCase();
+                        
+                        // Common VPN/Proxy providers
+                        const vpnKeywords = [
+                            'vpn', 'proxy', 'tor', 'nord', 'express', 'surfshark', 
+                            'cyberghost', 'private internet access', 'pia', 'mullvad',
+                            'windscribe', 'proton', 'tunnelbear', 'hide.me', 'purevpn',
+                            'ipvanish', 'hotspot shield', 'zenmate', 'hoxx', 'browsec'
+                        ];
+                        
+                        const isVpn = vpnKeywords.some(keyword => 
+                            isp.includes(keyword) || org.includes(keyword)
+                        );
+                        
+                        return {
+                            isVpn,
+                            isProxy: isVpn,
+                            vpnProvider: isVpn ? 'Detected by ISP analysis' : null
+                        };
+                    }
+                } catch (error) {
+                    console.log('ISP-based VPN detection failed:', error.message);
+                }
+                return null;
+            }
+        ];
+
+        // Try each service until one works
+        for (let i = 0; i < vpnServices.length; i++) {
+            try {
+                const result = await vpnServices[i]();
+                if (result) {
+                    console.log(`VPN detection result from service ${i + 1} for IP: ${ip}`, result);
+                    return result;
+                }
+            } catch (error) {
+                console.log(`VPN detection service ${i + 1} failed for IP ${ip}:`, error.message);
+            }
+        }
+
+        // Default result if all services fail
+        return {
+            isVpn: false,
+            isProxy: false,
+            isTor: false,
+            vpnProvider: null,
+            proxyType: null
+        };
+    } catch (error) {
+        console.error('Error in VPN detection:', error);
+        return {
+            isVpn: false,
+            isProxy: false,
+            isTor: false,
+            vpnProvider: null,
+            proxyType: null
+        };
+    }
 }
 
 // Get location data from IP
@@ -229,10 +370,40 @@ async function getLocationData(ip) {
 app.post('/api/track', async (req, res) => {
     try {
         const ip = getRealIP(req);
-        const { website, userAgent, referer } = req.body;
+        const { 
+            website, 
+            userAgent, 
+            referer,
+            computerId,
+            deviceFingerprint,
+            screenResolution,
+            colorDepth,
+            platform,
+            language,
+            timezone,
+            hardwareConcurrency,
+            maxTouchPoints,
+            cookieEnabled,
+            doNotTrack
+        } = req.body;
 
-        // Get location data
-        const locationData = await getLocationData(ip);
+        // Check for recent visits from same IP to prevent duplicate tracking within 1 minute
+        const recentVisit = await Visit.findOne({
+            ip: ip,
+            website: website,
+            timestamp: { $gte: new Date(Date.now() - 1 * 60 * 1000) } // Last 1 minute
+        });
+
+        if (recentVisit) {
+            console.log(`Skipping duplicate visit from IP: ${ip} for website: ${website} within 1 minute`);
+            return res.status(200).json({ success: true, message: 'Visit already tracked recently' });
+        }
+
+        // Get location data and VPN detection
+        const [locationData, vpnData] = await Promise.all([
+            getLocationData(ip),
+            detectVpnProxy(ip)
+        ]);
 
         // Create new visit record
         const visit = new Visit({
@@ -240,7 +411,19 @@ app.post('/api/track', async (req, res) => {
             website,
             userAgent,
             referer,
-            ...locationData
+            computerId,
+            deviceFingerprint,
+            screenResolution,
+            colorDepth,
+            platform,
+            language,
+            timezone,
+            hardwareConcurrency,
+            maxTouchPoints,
+            cookieEnabled,
+            doNotTrack,
+            ...locationData,
+            ...vpnData
         });
 
         await visit.save();
@@ -255,9 +438,16 @@ app.post('/api/track', async (req, res) => {
             lat: locationData.lat,
             lon: locationData.lon,
             accuracy: locationData.accuracy,
-            timestamp: new Date()
+            isVpn: vpnData.isVpn,
+            isProxy: vpnData.isProxy,
+            isTor: vpnData.isTor,
+            vpnProvider: vpnData.vpnProvider,
+            computerId,
+            timestamp: new Date(),
+            referer: referer
         });
 
+        console.log(`New visit tracked - IP: ${ip}, Website: ${website}, VPN: ${vpnData.isVpn}, Computer ID: ${computerId}`);
         res.status(200).json({ success: true, message: 'Visit tracked' });
     } catch (error) {
         console.error('Error tracking visit:', error);
@@ -310,6 +500,11 @@ app.get('/api/dashboard', async (req, res) => {
                     lat: { $first: '$lat' },
                     lon: { $first: '$lon' },
                     accuracy: { $first: '$accuracy' },
+                    isVpn: { $first: '$isVpn' },
+                    isProxy: { $first: '$isProxy' },
+                    isTor: { $first: '$isTor' },
+                    vpnProvider: { $first: '$vpnProvider' },
+                    computerId: { $first: '$computerId' },
                     lastVisit: { $max: '$timestamp' }
                 }
             },
@@ -324,6 +519,11 @@ app.get('/api/dashboard', async (req, res) => {
                     lat: 1,
                     lon: 1,
                     accuracy: 1,
+                    isVpn: 1,
+                    isProxy: 1,
+                    isTor: 1,
+                    vpnProvider: 1,
+                    computerId: 1,
                     lastVisit: 1
                 }
             },
@@ -463,6 +663,167 @@ app.get('/api/ip-stats-map', async (req, res) => {
         res.status(500).json({ 
             success: false, 
             message: 'Error fetching IP statistics' 
+        });
+    }
+});
+
+// Get detailed IP analytics showing multiple visits per website
+app.get('/api/ip-analytics', async (req, res) => {
+    try {
+        const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+        // Get detailed analytics showing IP visits per website
+        const ipAnalytics = await Visit.aggregate([
+            { $match: { timestamp: { $gte: last24Hours } } },
+            {
+                $group: {
+                    _id: {
+                        ip: '$ip',
+                        website: '$website'
+                    },
+                    visitCount: { $sum: 1 },
+                    firstVisit: { $min: '$timestamp' },
+                    lastVisit: { $max: '$timestamp' },
+                    country: { $first: '$country' },
+                    city: { $first: '$city' },
+                    isp: { $first: '$isp' },
+                    lat: { $first: '$lat' },
+                    lon: { $first: '$lon' },
+                    isVpn: { $first: '$isVpn' },
+                    isProxy: { $first: '$isProxy' },
+                    isTor: { $first: '$isTor' },
+                    vpnProvider: { $first: '$vpnProvider' },
+                    computerId: { $first: '$computerId' }
+                }
+            },
+            {
+                $group: {
+                    _id: '$_id.ip',
+                    totalVisits: { $sum: '$visitCount' },
+                    websites: {
+                        $push: {
+                            website: '$_id.website',
+                            visits: '$visitCount',
+                            firstVisit: '$firstVisit',
+                            lastVisit: '$lastVisit'
+                        }
+                    },
+                    country: { $first: '$country' },
+                    city: { $first: '$city' },
+                    isp: { $first: '$isp' },
+                    lat: { $first: '$lat' },
+                    lon: { $first: '$lon' },
+                    isVpn: { $first: '$isVpn' },
+                    isProxy: { $first: '$isProxy' },
+                    isTor: { $first: '$isTor' },
+                    vpnProvider: { $first: '$vpnProvider' },
+                    computerId: { $first: '$computerId' }
+                }
+            },
+            {
+                $project: {
+                    ip: '$_id',
+                    totalVisits: 1,
+                    websites: 1,
+                    country: 1,
+                    city: 1,
+                    isp: 1,
+                    lat: 1,
+                    lon: 1,
+                    isVpn: 1,
+                    isProxy: 1,
+                    isTor: 1,
+                    vpnProvider: 1,
+                    computerId: 1,
+                    websiteCount: { $size: '$websites' }
+                }
+            },
+            { $sort: { totalVisits: -1 } }
+        ]);
+
+        res.json({
+            success: true,
+            analytics: ipAnalytics
+        });
+    } catch (error) {
+        console.error('Error fetching IP analytics:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error fetching IP analytics' 
+        });
+    }
+});
+
+// Get VPN and proxy statistics
+app.get('/api/vpn-stats', async (req, res) => {
+    try {
+        const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+        const vpnStats = await Visit.aggregate([
+            { $match: { timestamp: { $gte: last24Hours } } },
+            {
+                $group: {
+                    _id: null,
+                    totalVisits: { $sum: 1 },
+                    vpnVisits: { $sum: { $cond: ['$isVpn', 1, 0] } },
+                    proxyVisits: { $sum: { $cond: ['$isProxy', 1, 0] } },
+                    torVisits: { $sum: { $cond: ['$isTor', 1, 0] } },
+                    cleanVisits: { $sum: { $cond: [{ $and: [{ $eq: ['$isVpn', false] }, { $eq: ['$isProxy', false] }, { $eq: ['$isTor', false] }] }, 1, 0] } },
+                    uniqueIPs: { $addToSet: '$ip' },
+                    uniqueComputerIds: { $addToSet: '$computerId' }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    totalVisits: 1,
+                    vpnVisits: 1,
+                    proxyVisits: 1,
+                    torVisits: 1,
+                    cleanVisits: 1,
+                    uniqueIPs: { $size: '$uniqueIPs' },
+                    uniqueComputerIds: { $size: '$uniqueComputerIds' },
+                    vpnPercentage: { $multiply: [{ $divide: ['$vpnVisits', '$totalVisits'] }, 100] },
+                    proxyPercentage: { $multiply: [{ $divide: ['$proxyVisits', '$totalVisits'] }, 100] },
+                    torPercentage: { $multiply: [{ $divide: ['$torVisits', '$totalVisits'] }, 100] }
+                }
+            }
+        ]);
+
+        // Get top VPN providers
+        const topVpnProviders = await Visit.aggregate([
+            { $match: { timestamp: { $gte: last24Hours }, isVpn: true } },
+            {
+                $group: {
+                    _id: '$vpnProvider',
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { count: -1 } },
+            { $limit: 10 }
+        ]);
+
+        res.json({
+            success: true,
+            stats: vpnStats[0] || {
+                totalVisits: 0,
+                vpnVisits: 0,
+                proxyVisits: 0,
+                torVisits: 0,
+                cleanVisits: 0,
+                uniqueIPs: 0,
+                uniqueComputerIds: 0,
+                vpnPercentage: 0,
+                proxyPercentage: 0,
+                torPercentage: 0
+            },
+            topVpnProviders
+        });
+    } catch (error) {
+        console.error('Error fetching VPN stats:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error fetching VPN statistics' 
         });
     }
 });
