@@ -45,7 +45,19 @@ const io = socketIo(server, {
 // Middleware
 app.use(cors(corsOptions));
 
-app.use(express.json());
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Log incoming requests for debugging
+app.use((req, res, next) => {
+    if (req.path === '/api/track') {
+        console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+        console.log('Content-Type:', req.get('Content-Type'));
+        console.log('Body:', JSON.stringify(req.body, null, 2));
+    }
+    next();
+});
 
 // MongoDB Connection
 const connectDB = async () => {
@@ -372,7 +384,18 @@ async function getLocationData(ip) {
 // Track visitor endpoint
 app.post('/api/track', async (req, res) => {
     try {
+        // Validate request body
+        if (!req.body || typeof req.body !== 'object') {
+            console.error('Invalid request body:', req.body);
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Invalid request body - JSON data required' 
+            });
+        }
+
         const ip = getRealIP(req);
+        
+        // Extract data with fallbacks
         const { 
             website, 
             userAgent, 
@@ -389,6 +412,15 @@ app.post('/api/track', async (req, res) => {
             cookieEnabled,
             doNotTrack
         } = req.body;
+
+        // Validate required fields
+        if (!website) {
+            console.error('Missing website in request body:', req.body);
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Website is required' 
+            });
+        }
 
         // Check for recent visits from same IP to prevent duplicate tracking within 1 minute
         const recentVisit = await Visit.findOne({
