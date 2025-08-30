@@ -112,7 +112,10 @@ const visitSchema = new mongoose.Schema({
     hardwareConcurrency: Number,
     maxTouchPoints: Number,
     cookieEnabled: Boolean,
-    doNotTrack: Boolean,
+    doNotTrack: {
+        type: Boolean,
+        default: false
+    },
     // Additional tracking data
     timestamp: {
         type: Date,
@@ -421,7 +424,7 @@ app.post('/api/track', async (req, res) => {
             hardwareConcurrency,
             maxTouchPoints,
             cookieEnabled,
-            doNotTrack,
+            doNotTrack: doNotTrack === true || doNotTrack === '1' || doNotTrack === 'true',
             ...locationData,
             ...vpnData
         });
@@ -451,7 +454,17 @@ app.post('/api/track', async (req, res) => {
         res.status(200).json({ success: true, message: 'Visit tracked' });
     } catch (error) {
         console.error('Error tracking visit:', error);
-        res.status(500).json({ success: false, message: 'Error tracking visit' });
+        
+        // Log detailed error information
+        if (error.name === 'ValidationError') {
+            console.error('Validation errors:', error.errors);
+        }
+        
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error tracking visit',
+            error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        });
     }
 });
 
