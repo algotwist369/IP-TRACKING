@@ -1,20 +1,106 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
 const http = require('http');
 const socketIo = require('socket.io');
-const axios = require('axios');
-require('dotenv').config();
+const path = require('path');
+
+// Import configurations and services
+const connectDB = require('./config/database');
+const logger = require('./utils/logger');
+
+// Import routes
+const authRoutes = require('./routes/auth');
+const testAuthRoutes = require('./routes/test-auth');
+const testDashboardRoutes = require('./routes/test-dashboard');
+const trackingRoutes = require('./routes/tracking');
+const dashboardRoutes = require('./routes/dashboard');
+const websiteRoutes = require('./routes/websites');
+const paymentRoutes = require('./routes/payments');
+const adminRoutes = require('./routes/admin');
+
+// Import middleware
+const { authenticateToken } = require('./middleware/auth');
+const { validateTrackingData } = require('./middleware/validation');
+
 const app = express();
 const server = http.createServer(app);
 
+// ============================================================================
+// SOCKET.IO CONFIGURATION
+// ============================================================================
 
+const io = socketIo(server, {
+    cors: {
+        origin: process.env.CORS_ORIGIN?.split(',') || ["http://localhost:3000", "http://localhost:5173"],
+        methods: ["GET", "POST"],
+        credentials: true
+    },
+    transports: ['websocket', 'polling']
+});
+
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+    logger.info('Dashboard connected:', socket.id);
+
+    // Join user to their specific room for real-time updates
+    socket.on('joinUserRoom', (userId) => {
+        socket.join(`user_${userId}`);
+        logger.info(`User ${userId} joined their room`);
+    });
+
+    // Join website-specific room
+    socket.on('joinWebsiteRoom', (trackingCode) => {
+        socket.join(`website_${trackingCode}`);
+        logger.info(`Socket joined website room: ${trackingCode}`);
+    });
+
+    socket.on('disconnect', () => {
+        logger.info('Dashboard disconnected:', socket.id);
+    });
+});
+
+// Make io available to routes
+app.set('io', io);
+
+// ============================================================================
+// MIDDLEWARE CONFIGURATION
+// ============================================================================
+
+// Security middleware
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'", "wss:", "ws:"]
+        }
+    },
+    crossOriginEmbedderPolicy: false
+}));
+
+// CORS configuration
 const corsOptions = {
     origin: function (origin, callback) {
-        callback(null, origin || "*"); // Reflect origin
+        const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || ["http://localhost:3000"];
+        
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
     },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: [
         "Content-Type",
         "Authorization",
@@ -33,856 +119,224 @@ const corsOptions = {
         "X-Referrer",
         "X-URL",
         "X-Title",
-        "X-User-Agent"
-    ],
+        "X-User-Agent",
+        "X-Tracking-Code",
+        "X-Website-Domain"
+    ]
 };
 
-
-const io = socketIo(server, {
-            cors: corsOptions
-});
-
-// Middleware
 app.use(cors(corsOptions));
 
+// Rate limiting
+const limiter = rateLimit({
+    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
+    message: {
+        error: 'Too many requests from this IP, please try again later.',
+        retryAfter: Math.ceil((parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000) / 1000)
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res) => {
+        logger.warn(`Rate limit exceeded for IP: ${req.ip}`);
+        res.status(429).json({
+            success: false,
+            message: 'Too many requests from this IP, please try again later.',
+            retryAfter: Math.ceil((parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000) / 1000)
+        });
+    }
+});
+
+// Apply rate limiting to all routes
+app.use(limiter);
+
+// Stricter rate limiting for tracking endpoint
+const trackingLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000, // 1 minute
+    max: 50000000000, // limit each IP to 50 tracking requests per minute
+    message: {
+        error: 'Too many tracking requests from this IP, please try again later.',
+        retryAfter: 60 
+    },
+    handler: (req, res) => {
+        logger.warn(`Tracking rate limit exceeded for IP: ${req.ip}`);
+        res.status(429).json({
+            success: false,
+            message: 'Too many tracking requests from this IP, please try again later.',
+            retryAfter: 60
+        });
+    }
+});
+
+// Compression middleware
+app.use(compression());
+
 // Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Log incoming requests for debugging
-app.use((req, res, next) => {
-    if (req.path === '/api/track') {
-        console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-        console.log('Content-Type:', req.get('Content-Type'));
-        console.log('Body:', JSON.stringify(req.body, null, 2));
+app.use(express.json({ 
+    limit: '10mb',
+    verify: (req, res, buf) => {
+        try {
+            JSON.parse(buf);
+        } catch (e) {
+            res.status(400).json({ 
+                success: false, 
+                message: 'Invalid JSON payload' 
+            });
+            throw new Error('Invalid JSON');
+        }
     }
-    next();
-});
+}));
 
-// MongoDB Connection
-const connectDB = async () => {
-    try {
-        await mongoose.connect(process.env.MONGO_URI);
-        console.log('MongoDB connected');
-    } catch (error) {
-        console.error('MongoDB connection error:', error);
-    }
-};
+app.use(express.urlencoded({ 
+    extended: true, 
+    limit: '10mb' 
+}));
 
-
-connectDB();
- 
-// Visit Schema
-const visitSchema = new mongoose.Schema({
-    ip: {
-        type: String,
-        required: true
-    },
-    website: {
-        type: String,
-        required: true
-    },
-    userAgent: String,
-    referer: String,
-    country: String,
-    region: String,
-    city: String,
-    district: String,
-    zip: String,
-    timezone: String,
-    isp: String,
-    lat: Number,
-    lon: Number,
-    accuracy: {
-        type: String,
-        enum: ['high', 'medium', 'low', 'none'],
-        default: 'none'
-    },
-    // VPN and Proxy Detection
-    isVpn: {
-        type: Boolean,
-        default: false
-    },
-    isProxy: {
-        type: Boolean,
-        default: false
-    },
-    isTor: {
-        type: Boolean,
-        default: false
-    },
-    vpnProvider: String,
-    proxyType: String,
-    // Computer ID and Fingerprinting
-    computerId: String,
-    deviceFingerprint: String,
-    screenResolution: String,
-    colorDepth: Number,
-    platform: String,
-    language: String,
-    timezone: String,
-    hardwareConcurrency: Number,
-    maxTouchPoints: Number,
-    cookieEnabled: Boolean,
-    doNotTrack: {
-        type: Boolean,
-        default: false
-    },
-    // Additional tracking data
-    timestamp: {
-        type: Date,
-        default: Date.now
-    }
-});
-
-const Visit = mongoose.model('Visit', visitSchema);
+// Request logging middleware
+app.use(logger.logRequest);
 
 // ============================================================================
-// HELPER FUNCTIONS
+// ROUTES
 // ============================================================================
 
-// Get real IP address (handles proxies, load balancers)
-function getRealIP(req) {
-    return req.headers['x-forwarded-for'] ||
-        req.headers['x-real-ip'] ||
-        req.connection.remoteAddress ||
-        req.socket.remoteAddress ||
-        (req.connection.socket ? req.connection.socket.remoteAddress : null);
-}
-
-// VPN and Proxy Detection
-async function detectVpnProxy(ip) {
-    try {
-        // Use multiple services for VPN detection
-        const vpnServices = [
-            // IPHub VPN detection
-            async () => {
-                try {
-                    const response = await axios.get(`https://v2.api.iphub.info/guest/ip/${ip}`, {
-                        timeout: 5000,
-                        headers: {
-                            'User-Agent': 'IP-Tracker/1.0'
-                        }
-                    });
-                    if (response.data && response.data.block !== undefined) {
-                        return {
-                            isVpn: response.data.block === 1,
-                            isProxy: response.data.block === 1,
-                            vpnProvider: response.data.block === 1 ? 'Detected by IPHub' : null
-                        };
-                    }
-                } catch (error) {
-                    console.log('IPHub VPN detection failed:', error.message);
-                }
-                return null;
-            },
-            
-            // IPQualityScore VPN detection (free tier)
-            async () => {
-                try {
-                    const response = await axios.get(`https://ipqualityscore.com/api/json/ip/YOUR_API_KEY/${ip}`, {
-                        timeout: 5000
-                    });
-                    if (response.data && response.data.success) {
-                        return {
-                            isVpn: response.data.vpn || response.data.proxy,
-                            isProxy: response.data.proxy,
-                            isTor: response.data.tor,
-                            vpnProvider: response.data.vpn ? 'Detected by IPQS' : null,
-                            proxyType: response.data.proxy ? response.data.proxy_type : null
-                        };
-                    }
-                } catch (error) {
-                    console.log('IPQualityScore VPN detection failed:', error.message);
-                }
-                return null;
-            },
-            
-            // Simple heuristic detection based on ISP
-            async () => {
-                try {
-                    const response = await axios.get(`http://ip-api.com/json/${ip}?fields=isp,org`, {
-                        timeout: 5000
-                    });
-                    if (response.data && response.data.status === 'success') {
-                        const isp = response.data.isp.toLowerCase();
-                        const org = response.data.org.toLowerCase();
-                        
-                        // Common VPN/Proxy providers
-                        const vpnKeywords = [
-                            'vpn', 'proxy', 'tor', 'nord', 'express', 'surfshark', 
-                            'cyberghost', 'private internet access', 'pia', 'mullvad',
-                            'windscribe', 'proton', 'tunnelbear', 'hide.me', 'purevpn',
-                            'ipvanish', 'hotspot shield', 'zenmate', 'hoxx', 'browsec'
-                        ];
-                        
-                        const isVpn = vpnKeywords.some(keyword => 
-                            isp.includes(keyword) || org.includes(keyword)
-                        );
-                        
-                        return {
-                            isVpn,
-                            isProxy: isVpn,
-                            vpnProvider: isVpn ? 'Detected by ISP analysis' : null
-                        };
-                    }
-                } catch (error) {
-                    console.log('ISP-based VPN detection failed:', error.message);
-                }
-                return null;
-            }
-        ];
-
-        // Try each service until one works
-        for (let i = 0; i < vpnServices.length; i++) {
-            try {
-                const result = await vpnServices[i]();
-                if (result) {
-                    console.log(`VPN detection result from service ${i + 1} for IP: ${ip}`, result);
-                    return result;
-                }
-            } catch (error) {
-                console.log(`VPN detection service ${i + 1} failed for IP ${ip}:`, error.message);
-            }
-        }
-
-        // Default result if all services fail
-        return {
-            isVpn: false,
-            isProxy: false,
-            isTor: false,
-            vpnProvider: null,
-            proxyType: null
-        };
-    } catch (error) {
-        console.error('Error in VPN detection:', error);
-        return {
-            isVpn: false,
-            isProxy: false,
-            isTor: false,
-            vpnProvider: null,
-            proxyType: null
-        };
-    }
-}
-
-// Get location data from IP
-async function getLocationData(ip) {
-    try {
-        // Try multiple geolocation services for better accuracy
-        const services = [
-            // Primary service: ip-api.com (free, good accuracy)
-            async () => {
-                const response = await axios.get(`http://ip-api.com/json/${ip}?fields=status,message,country,regionName,city,timezone,isp,lat,lon,zip,district`, {
-                    timeout: 5000
-                });
-                if (response.data.status === 'success') {
-                    return {
-                        country: response.data.country,
-                        region: response.data.regionName,
-                        city: response.data.city,
-                        district: response.data.district,
-                        zip: response.data.zip,
-                        timezone: response.data.timezone,
-                        isp: response.data.isp,
-                        lat: response.data.lat,
-                        lon: response.data.lon,
-                        accuracy: 'high'
-                    };
-                }
-                throw new Error('ip-api.com failed');
-            },
-            
-            // Secondary service: ipapi.co (free tier, good accuracy)
-            async () => {
-                const response = await axios.get(`https://ipapi.co/${ip}/json/`, {
-                    timeout: 5000,
-                    headers: {
-                        'User-Agent': 'IP-Tracker/1.0'
-                    }
-                });
-                if (response.data && response.data.latitude && response.data.longitude) {
-                    return {
-                        country: response.data.country_name,
-                        region: response.data.region,
-                        city: response.data.city,
-                        district: response.data.district,
-                        zip: response.data.postal,
-                        timezone: response.data.timezone,
-                        isp: response.data.org,
-                        lat: response.data.latitude,
-                        lon: response.data.longitude,
-                        accuracy: 'medium'
-                    };
-                }
-                throw new Error('ipapi.co failed');
-            },
-            
-            // Fallback service: ipinfo.io (free tier)
-            async () => {
-                const response = await axios.get(`https://ipinfo.io/${ip}/json`, {
-                    timeout: 5000,
-                    headers: {
-                        'User-Agent': 'IP-Tracker/1.0'
-                    }
-                });
-                if (response.data && response.data.loc) {
-                    const [lat, lon] = response.data.loc.split(',').map(Number);
-                    return {
-                        country: response.data.country,
-                        region: response.data.region,
-                        city: response.data.city,
-                        district: response.data.district,
-                        zip: response.data.postal,
-                        timezone: response.data.timezone,
-                        isp: response.data.org,
-                        lat: lat,
-                        lon: lon,
-                        accuracy: 'medium'
-                    };
-                }
-                throw new Error('ipinfo.io failed');
-            }
-        ];
-
-        // Try each service in order until one works
-        for (let i = 0; i < services.length; i++) {
-            try {
-                const result = await services[i]();
-                console.log(`Location data obtained from service ${i + 1} for IP: ${ip}`);
-                return result;
-            } catch (error) {
-                console.log(`Service ${i + 1} failed for IP ${ip}:`, error.message);
-                if (i === services.length - 1) {
-                    throw error; // All services failed
-                }
-            }
-        }
-    } catch (error) {
-        console.error('Error fetching location data:', error);
-    }
-
-    // Return default data if all services fail
-    return {
-        country: 'Unknown',
-        region: 'Unknown',
-        city: 'Unknown',
-        district: 'Unknown',
-        zip: 'Unknown',
-        timezone: 'Unknown',
-        isp: 'Unknown',
-        lat: 0,
-        lon: 0,
-        accuracy: 'none'
-    };
-}
-
-// ============================================================================
-// API ROUTES
-// ============================================================================
-
-// Track visitor endpoint
-app.post('/api/track', async (req, res) => {
-    try {
-        // Validate request body
-        if (!req.body || typeof req.body !== 'object') {
-            console.error('Invalid request body:', req.body);
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Invalid request body - JSON data required' 
-            });
-        }
-
-        const ip = getRealIP(req);
-        
-        // Extract data with fallbacks
-        const { 
-            website, 
-            userAgent, 
-            referer,
-            computerId,
-            deviceFingerprint,
-            screenResolution,
-            colorDepth,
-            platform,
-            language,
-            timezone,
-            hardwareConcurrency,
-            maxTouchPoints,
-            cookieEnabled,
-            doNotTrack
-        } = req.body;
-
-        // Validate required fields
-        if (!website) {
-            console.error('Missing website in request body:', req.body);
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Website is required' 
-            });
-        }
-
-        // Check for recent visits from same IP to prevent duplicate tracking within 1 minute
-        const recentVisit = await Visit.findOne({
-            ip: ip,
-            website: website,
-            timestamp: { $gte: new Date(Date.now() - 1 * 60 * 1000) } // Last 1 minute
-        });
-
-        if (recentVisit) {
-            console.log(`Skipping duplicate visit from IP: ${ip} for website: ${website} within 1 minute`);
-            return res.status(200).json({ success: true, message: 'Visit already tracked recently' });
-        }
-
-        // Get location data and VPN detection
-        const [locationData, vpnData] = await Promise.all([
-            getLocationData(ip),
-            detectVpnProxy(ip)
-        ]);
-
-        // Create new visit record
-        const visit = new Visit({
-            ip,
-            website,
-            userAgent,
-            referer,
-            computerId,
-            deviceFingerprint,
-            screenResolution,
-            colorDepth,
-            platform,
-            language,
-            timezone,
-            hardwareConcurrency,
-            maxTouchPoints,
-            cookieEnabled,
-            doNotTrack: doNotTrack === true || doNotTrack === '1' || doNotTrack === 'true',
-            ...locationData,
-            ...vpnData
-        });
-
-        await visit.save();
-
-        // Emit real-time data to dashboard
-        io.emit('newVisit', {
-            ip,
-            website,
-            country: locationData.country,
-            city: locationData.city,
-            isp: locationData.isp,
-            lat: locationData.lat,
-            lon: locationData.lon,
-            accuracy: locationData.accuracy,
-            isVpn: vpnData.isVpn,
-            isProxy: vpnData.isProxy,
-            isTor: vpnData.isTor,
-            vpnProvider: vpnData.vpnProvider,
-            computerId,
-            timestamp: new Date(),
-            referer: referer
-        });
-
-        console.log(`New visit tracked - IP: ${ip}, Website: ${website}, VPN: ${vpnData.isVpn}, Computer ID: ${computerId}`);
-        res.status(200).json({ success: true, message: 'Visit tracked' });
-    } catch (error) {
-        console.error('Error tracking visit:', error);
-        
-        // Log detailed error information
-        if (error.name === 'ValidationError') {
-            console.error('Validation errors:', error.errors);
-        }
-        
-        res.status(500).json({ 
-            success: false, 
-            message: 'Error tracking visit',
-            error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-        });
-    }
-});
-
-// Get dashboard data
-app.get('/api/dashboard', async (req, res) => {
-    try {
-        const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-        // Get visits from last 24 hours
-        const recentVisits = await Visit.find({
-            timestamp: { $gte: last24Hours }
-        }).sort({ timestamp: -1 });
-
-        // Aggregate data by website
-        const websiteStats = await Visit.aggregate([
-            { $match: { timestamp: { $gte: last24Hours } } },
-            {
-                $group: {
-                    _id: '$website',
-                    totalVisits: { $sum: 1 },
-                    uniqueIPs: { $addToSet: '$ip' },
-                    countries: { $addToSet: '$country' }
-                }
-            },
-            {
-                $project: {
-                    website: '$_id',
-                    totalVisits: 1,
-                    uniqueVisitors: { $size: '$uniqueIPs' },
-                    countries: { $size: '$countries' }
-                }
-            }
-        ]);
-
-        // Aggregate data by IP
-        const ipStats = await Visit.aggregate([
-            { $match: { timestamp: { $gte: last24Hours } } },
-            {
-                $group: {
-                    _id: '$ip',
-                    totalVisits: { $sum: 1 },
-                    websites: { $addToSet: '$website' },
-                    country: { $first: '$country' },
-                    city: { $first: '$city' },
-                    isp: { $first: '$isp' },
-                    lat: { $first: '$lat' },
-                    lon: { $first: '$lon' },
-                    accuracy: { $first: '$accuracy' },
-                    isVpn: { $first: '$isVpn' },
-                    isProxy: { $first: '$isProxy' },
-                    isTor: { $first: '$isTor' },
-                    vpnProvider: { $first: '$vpnProvider' },
-                    computerId: { $first: '$computerId' },
-                    lastVisit: { $max: '$timestamp' }
-                }
-            },
-            {
-                $project: {
-                    ip: '$_id',
-                    totalVisits: 1,
-                    websitesCount: { $size: '$websites' },
-                    country: 1,
-                    city: 1,
-                    isp: 1,
-                    lat: 1,
-                    lon: 1,
-                    accuracy: 1,
-                    isVpn: 1,
-                    isProxy: 1,
-                    isTor: 1,
-                    vpnProvider: 1,
-                    computerId: 1,
-                    lastVisit: 1
-                }
-            },
-            { $sort: { totalVisits: -1 } }
-        ]);
-
-        res.json({
-            recentVisits,
-            websiteStats,
-            ipStats,
-            totalVisits24h: recentVisits.length
-        });
-    } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-        res.status(500).json({ error: 'Error fetching dashboard data' });
-    }
-});
-
-// Get visits by website
-app.get('/api/website/:domain', async (req, res) => {
-    try {
-        const { domain } = req.params;
-        const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-        const visits = await Visit.find({
-            website: domain,
-            timestamp: { $gte: last24Hours }
-        }).sort({ timestamp: -1 });
-
-        res.json(visits);
-    } catch (error) {
-        res.status(500).json({ error: 'Error fetching website data' });
-    }
-});
-
-// Track IP location endpoint
-app.get('/api/track-ip', async (req, res) => {
-    try {
-        const { ip } = req.query;
-        
-        if (!ip) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'IP address is required' 
-            });
-        }
-
-        // Validate IP format (basic validation)
-        const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-        if (!ipRegex.test(ip)) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Invalid IP address format' 
-            });
-        }
-
-        // Get location data for the IP
-        const locationData = await getLocationData(ip);
-
-        // Check if we have valid coordinates
-        if (locationData.lat === 0 && locationData.lon === 0) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Could not locate this IP address' 
-            });
-        }
-
-        // Return the location data
-        res.json({
-            success: true,
-            ip: ip,
-            country: locationData.country,
-            region: locationData.region,
-            city: locationData.city,
-            district: locationData.district,
-            zip: locationData.zip,
-            timezone: locationData.timezone,
-            isp: locationData.isp,
-            lat: locationData.lat,
-            lon: locationData.lon,
-            accuracy: locationData.accuracy,
-            timestamp: new Date()
-        });
-
-    } catch (error) {
-        console.error('Error tracking IP:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Error tracking IP location' 
-        });
-    }
-});
-
-// Get IP statistics with coordinates for map
-app.get('/api/ip-stats-map', async (req, res) => {
-    try {
-        const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-        // Get IP stats with coordinates for map display
-        const ipStatsWithCoords = await Visit.aggregate([
-            { $match: { timestamp: { $gte: last24Hours } } },
-            {
-                $group: {
-                    _id: '$ip',
-                    totalVisits: { $sum: 1 },
-                    websites: { $addToSet: '$website' },
-                    country: { $first: '$country' },
-                    city: { $first: '$city' },
-                    isp: { $first: '$isp' },
-                    lat: { $first: '$lat' },
-                    lon: { $first: '$lon' },
-                    lastVisit: { $max: '$timestamp' }
-                }
-            },
-            {
-                $project: {
-                    ip: '$_id',
-                    totalVisits: 1,
-                    websitesCount: { $size: '$websites' },
-                    country: 1,
-                    city: 1,
-                    isp: 1,
-                    lat: 1,
-                    lon: 1,
-                    lastVisit: 1
-                }
-            },
-            { $sort: { totalVisits: -1 } }
-        ]);
-
-        res.json({
-            success: true,
-            ipStats: ipStatsWithCoords
-        });
-    } catch (error) {
-        console.error('Error fetching IP stats for map:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Error fetching IP statistics' 
-        });
-    }
-});
-
-// Get detailed IP analytics showing multiple visits per website
-app.get('/api/ip-analytics', async (req, res) => {
-    try {
-        const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-        // Get detailed analytics showing IP visits per website
-        const ipAnalytics = await Visit.aggregate([
-            { $match: { timestamp: { $gte: last24Hours } } },
-            {
-                $group: {
-                    _id: {
-                        ip: '$ip',
-                        website: '$website'
-                    },
-                    visitCount: { $sum: 1 },
-                    firstVisit: { $min: '$timestamp' },
-                    lastVisit: { $max: '$timestamp' },
-                    country: { $first: '$country' },
-                    city: { $first: '$city' },
-                    isp: { $first: '$isp' },
-                    lat: { $first: '$lat' },
-                    lon: { $first: '$lon' },
-                    isVpn: { $first: '$isVpn' },
-                    isProxy: { $first: '$isProxy' },
-                    isTor: { $first: '$isTor' },
-                    vpnProvider: { $first: '$vpnProvider' },
-                    computerId: { $first: '$computerId' }
-                }
-            },
-            {
-                $group: {
-                    _id: '$_id.ip',
-                    totalVisits: { $sum: '$visitCount' },
-                    websites: {
-                        $push: {
-                            website: '$_id.website',
-                            visits: '$visitCount',
-                            firstVisit: '$firstVisit',
-                            lastVisit: '$lastVisit'
-                        }
-                    },
-                    country: { $first: '$country' },
-                    city: { $first: '$city' },
-                    isp: { $first: '$isp' },
-                    lat: { $first: '$lat' },
-                    lon: { $first: '$lon' },
-                    isVpn: { $first: '$isVpn' },
-                    isProxy: { $first: '$isProxy' },
-                    isTor: { $first: '$isTor' },
-                    vpnProvider: { $first: '$vpnProvider' },
-                    computerId: { $first: '$computerId' }
-                }
-            },
-            {
-                $project: {
-                    ip: '$_id',
-                    totalVisits: 1,
-                    websites: 1,
-                    country: 1,
-                    city: 1,
-                    isp: 1,
-                    lat: 1,
-                    lon: 1,
-                    isVpn: 1,
-                    isProxy: 1,
-                    isTor: 1,
-                    vpnProvider: 1,
-                    computerId: 1,
-                    websiteCount: { $size: '$websites' }
-                }
-            },
-            { $sort: { totalVisits: -1 } }
-        ]);
-
-        res.json({
-            success: true,
-            analytics: ipAnalytics
-        });
-    } catch (error) {
-        console.error('Error fetching IP analytics:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Error fetching IP analytics' 
-        });
-    }
-});
-
-// Get VPN and proxy statistics
-app.get('/api/vpn-stats', async (req, res) => {
-    try {
-        const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-        const vpnStats = await Visit.aggregate([
-            { $match: { timestamp: { $gte: last24Hours } } },
-            {
-                $group: {
-                    _id: null,
-                    totalVisits: { $sum: 1 },
-                    vpnVisits: { $sum: { $cond: ['$isVpn', 1, 0] } },
-                    proxyVisits: { $sum: { $cond: ['$isProxy', 1, 0] } },
-                    torVisits: { $sum: { $cond: ['$isTor', 1, 0] } },
-                    cleanVisits: { $sum: { $cond: [{ $and: [{ $eq: ['$isVpn', false] }, { $eq: ['$isProxy', false] }, { $eq: ['$isTor', false] }] }, 1, 0] } },
-                    uniqueIPs: { $addToSet: '$ip' },
-                    uniqueComputerIds: { $addToSet: '$computerId' }
-                }
-            },
-            {
-                $project: {
-                    _id: 0,
-                    totalVisits: 1,
-                    vpnVisits: 1,
-                    proxyVisits: 1,
-                    torVisits: 1,
-                    cleanVisits: 1,
-                    uniqueIPs: { $size: '$uniqueIPs' },
-                    uniqueComputerIds: { $size: '$uniqueComputerIds' },
-                    vpnPercentage: { $multiply: [{ $divide: ['$vpnVisits', '$totalVisits'] }, 100] },
-                    proxyPercentage: { $multiply: [{ $divide: ['$proxyVisits', '$totalVisits'] }, 100] },
-                    torPercentage: { $multiply: [{ $divide: ['$torVisits', '$totalVisits'] }, 100] }
-                }
-            }
-        ]);
-
-        // Get top VPN providers
-        const topVpnProviders = await Visit.aggregate([
-            { $match: { timestamp: { $gte: last24Hours }, isVpn: true } },
-            {
-                $group: {
-                    _id: '$vpnProvider',
-                    count: { $sum: 1 }
-                }
-            },
-            { $sort: { count: -1 } },
-            { $limit: 10 }
-        ]);
-
-        res.json({
-            success: true,
-            stats: vpnStats[0] || {
-                totalVisits: 0,
-                vpnVisits: 0,
-                proxyVisits: 0,
-                torVisits: 0,
-                cleanVisits: 0,
-                uniqueIPs: 0,
-                uniqueComputerIds: 0,
-                vpnPercentage: 0,
-                proxyPercentage: 0,
-                torPercentage: 0
-            },
-            topVpnProviders
-        });
-    } catch (error) {
-        console.error('Error fetching VPN stats:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Error fetching VPN statistics' 
-        });
-    }
-});
-
-// Socket.IO connection handling
-io.on('connection', (socket) => {
-    console.log('Dashboard connected:', socket.id);
-
-    socket.on('disconnect', () => {
-        console.log('Dashboard disconnected:', socket.id);
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: 'IP Tracker Server is running',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || 'development'
     });
 });
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+// API routes
+app.use('/api/test-auth', testAuthRoutes); // Test routes for development
+app.use('/api/test-dashboard', testDashboardRoutes); // Test dashboard routes
+app.use('/api/auth', authRoutes);
+app.use('/api/tracking', trackingLimiter, trackingRoutes);
+app.use('/api/dashboard', authenticateToken, dashboardRoutes);
+app.use('/api/websites', authenticateToken, websiteRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/admin', authenticateToken, adminRoutes);
+
+// ============================================================================
+// ERROR HANDLING MIDDLEWARE
+// ============================================================================
+
+// 404 handler
+app.use('*', (req, res) => {
+    logger.warn(`Route not found: ${req.method} ${req.originalUrl}`);
+    res.status(404).json({
+        success: false,
+        message: 'Route not found',
+        path: req.originalUrl,
+        method: req.method
+    });
 });
+
+// Global error handler
+app.use((error, req, res, next) => {
+    logger.error('Global error handler:', {
+        error: error.message,
+        stack: error.stack,
+        url: req.url,
+        method: req.method,
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+    });
+
+    // Don't leak error details in production
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    
+    res.status(error.status || 500).json({
+        success: false,
+        message: isDevelopment ? error.message : 'Internal server error',
+        ...(isDevelopment && { stack: error.stack })
+    });
+});
+
+// ============================================================================
+// GRACEFUL SHUTDOWN
+// ============================================================================
+
+const gracefulShutdown = async (signal) => {
+    logger.info(`Received ${signal}. Starting graceful shutdown...`);
+    
+    try {
+        // Close HTTP server
+        server.close(() => {
+            logger.info('HTTP server closed');
+        });
+
+        // Close Socket.IO
+        io.close(() => {
+            logger.info('Socket.IO server closed');
+        });
+
+        // Close MongoDB connection
+        if (mongoose.connection.readyState === 1) {
+            await mongoose.connection.close();
+            logger.info('MongoDB connection closed');
+        }
+
+        logger.info('Graceful shutdown completed');
+        process.exit(0);
+    } catch (error) {
+        logger.error('Error during graceful shutdown:', error);
+        process.exit(1);
+    }
+};
+
+// Handle shutdown signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+    logger.error('Uncaught Exception:', error);
+    process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+    logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    process.exit(1);
+});
+
+// ============================================================================
+// SERVER STARTUP
+// ============================================================================
+
+const PORT = process.env.PORT || 5000;
+
+const startServer = async () => {
+    try {
+        // Connect to MongoDB
+        await connectDB();
+        
+        // Start server
+        server.listen(PORT, () => {
+            logger.info(`🚀 IP Tracker Server running on port ${PORT}`);
+            logger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+            logger.info(`🔒 Security: Helmet, CORS, Rate Limiting enabled`);
+            logger.info(`📡 Socket.IO: Real-time tracking enabled`);
+            logger.info(`🗄️  Database: MongoDB connected`);
+            
+            // Log feature flags
+            logger.info(`🎯 Features: VPN Detection: ${process.env.ENABLE_VPN_DETECTION === 'true' ? 'ON' : 'OFF'}`);
+            logger.info(`🎯 Features: Device Fingerprinting: ${process.env.ENABLE_DEVICE_FINGERPRINTING === 'true' ? 'ON' : 'OFF'}`);
+            logger.info(`🎯 Features: Real-time Tracking: ${process.env.ENABLE_REAL_TIME_TRACKING === 'true' ? 'ON' : 'OFF'}`);
+            logger.info(`🎯 Features: Payment Integration: ${process.env.ENABLE_PAYMENT_INTEGRATION === 'true' ? 'ON' : 'OFF'}`);
+        });
+        
+    } catch (error) {
+        logger.error('Failed to start server:', error);
+        process.exit(1);
+    }
+};
+
+// Start the server
+startServer();
+
+module.exports = { app, server, io };
