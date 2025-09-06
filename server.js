@@ -93,11 +93,9 @@ const corsOptions = {
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
         
-        if (allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
+        // Allow all origins for tracking scripts (public tracking)
+        // This is necessary for the tracking script to work on any website
+        callback(null, true);
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -153,7 +151,7 @@ app.use(limiter);
 // Stricter rate limiting for tracking endpoint
 const trackingLimiter = rateLimit({
     windowMs: 10 * 60 * 1000, // 1 minute
-    max: 50000000000, // limit each IP to 50 tracking requests per minute
+    max: 500, // limit each IP to 50 tracking requests per minute
     message: {
         error: 'Too many tracking requests from this IP, please try again later.',
         retryAfter: 60 
@@ -196,6 +194,13 @@ app.use(express.urlencoded({
 app.use(logger.logRequest);
 
 // ============================================================================
+// STATIC FILE SERVING
+// ============================================================================
+
+// Serve static files from public directory
+app.use(express.static(path.join(__dirname, 'public')));
+
+// ============================================================================
 // ROUTES
 // ============================================================================
 
@@ -208,6 +213,39 @@ app.get('/health', (req, res) => {
         uptime: process.uptime(),
         environment: process.env.NODE_ENV || 'development'
     });
+});
+
+// Tracking script endpoint with custom CORS
+app.get('/tracking-script.js', cors({
+    origin: '*',
+    methods: ['GET', 'OPTIONS'],
+    allowedHeaders: ['Content-Type'],
+    credentials: false
+}), (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+    
+    const fs = require('fs');
+    const path = require('path');
+    const scriptPath = path.join(__dirname, 'public', 'tracking-script.js');
+    
+    try {
+        const script = fs.readFileSync(scriptPath, 'utf8');
+        res.send(script);
+    } catch (error) {
+        logger.error('Error serving tracking script:', error);
+        res.status(404).send('// Tracking script not found');
+    }
+});
+
+// OPTIONS handler for tracking script (CORS preflight)
+app.options('/tracking-script.js', cors({
+    origin: '*',
+    methods: ['GET', 'OPTIONS'],
+    allowedHeaders: ['Content-Type'],
+    credentials: false
+}), (req, res) => {
+    res.status(200).end();
 });
 
 // API routes

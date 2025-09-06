@@ -11,7 +11,7 @@
  * - Real-time analytics
  * 
  * Usage: Include this script in your HTML <head> section
- * <script src="https://yourdomain.com/tracking-script.js"></script>
+ * <script src="https://track.d0s369.co.in/tracking-script.js"></script>
  * 
  * Configuration:
  * window.IPTrackerConfig = {
@@ -41,7 +41,7 @@
         enableDeviceFingerprinting: true,
         enableBehavioralTracking: true,
         privacyMode: 'standard',
-        endpoint: (window.location.origin.includes('localhost') ? 'http://localhost:5000' : window.location.origin) + '/api/tracking/track',
+        endpoint: 'https://track.d0s369.co.in/api/tracking/track',
         heartbeatInterval: 30000, // 30 seconds
         sessionTimeout: 1800000, // 30 minutes
         maxRetries: 3,

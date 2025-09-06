@@ -422,7 +422,7 @@ window.IPTrackerConfig = {
     website: '${domain}'
 };
 </script>
-<script src="${process.env.SERVER_URL || 'http://localhost:5000'}/tracking-script.js"></script>`,
+<script src="${process.env.SERVER_URL || 'https://track.d0s369.co.in'}/tracking-script.js"></script>`,
                     react: `// Add to your React component
 useEffect(() => {
     const script = document.createElement('script');
@@ -435,7 +435,7 @@ useEffect(() => {
     document.head.appendChild(script);
     
     const trackingScript = document.createElement('script');
-    trackingScript.src = '${process.env.SERVER_URL || 'http://localhost:5000'}/tracking-script.js';
+    trackingScript.src = '${process.env.SERVER_URL || 'https://track.d0s369.co.in'}/tracking-script.js';
     document.head.appendChild(trackingScript);
 }, []);`,
                     vue: `// Add to your Vue component
@@ -450,7 +450,7 @@ mounted() {
     document.head.appendChild(script);
     
     const trackingScript = document.createElement('script');
-    trackingScript.src = '${process.env.SERVER_URL || 'http://localhost:5000'}/tracking-script.js';
+    trackingScript.src = '${process.env.SERVER_URL || 'https://track.d0s369.co.in'}/tracking-script.js';
     document.head.appendChild(trackingScript);
 }`
                 }

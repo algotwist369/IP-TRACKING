@@ -7394,3 +7394,202 @@ Error: Not allowed by CORS
 2025-09-06 18:44:49 [INFO]: 🎯 Features: Payment Integration: ON {"service":"ip-tracker-server"}
 2025-09-06 18:44:49 [INFO]: Dashboard connected: {"service":"ip-tracker-server"}
 2025-09-06 18:44:52 [INFO]: Dashboard connected: {"service":"ip-tracker-server"}
+2025-09-06 18:51:45 [INFO]: User logged in: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:51:45 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"POST","url":"/login","status":200,"duration":"350ms","ip":"::1","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"}
+2025-09-06 18:51:46 [INFO]: Dashboard connected: {"service":"ip-tracker-server"}
+2025-09-06 18:51:46 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:51:46 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:51:46 [INFO]: Dashboard connected: {"service":"ip-tracker-server"}
+2025-09-06 18:51:46 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:51:46 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:51:46 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"GET","url":"/security-stats","status":200,"duration":"39ms","ip":"::1","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"}
+2025-09-06 18:51:46 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"GET","url":"/overview","status":200,"duration":"66ms","ip":"::1","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"}
+2025-09-06 18:51:46 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:51:46 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:51:46 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:51:46 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:51:46 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"GET","url":"/security-stats","status":200,"duration":"30ms","ip":"::1","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"}
+2025-09-06 18:51:46 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"GET","url":"/overview","status":200,"duration":"54ms","ip":"::1","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"}
+2025-09-06 18:51:55 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:51:55 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:51:55 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"GET","url":"/","status":200,"duration":"43ms","ip":"::1","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"}
+2025-09-06 18:51:55 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:51:55 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:51:55 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"GET","url":"/","status":304,"duration":"26ms","ip":"::1","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"}
+2025-09-06 18:52:59 [INFO]: Dashboard disconnected: {"service":"ip-tracker-server"}
+2025-09-06 18:52:59 [INFO]: Dashboard disconnected: {"service":"ip-tracker-server"}
+2025-09-06 18:53:00 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:53:00 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:53:00 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"GET","url":"/","status":304,"duration":"31ms","ip":"::1","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"}
+2025-09-06 18:53:00 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:53:00 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:53:00 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"GET","url":"/","status":304,"duration":"81ms","ip":"::1","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"}
+2025-09-06 18:53:48 [INFO]: 🚀 IP Tracker Server running on port 5000 {"service":"ip-tracker-server"}
+2025-09-06 18:53:48 [INFO]: 📊 Environment: development {"service":"ip-tracker-server"}
+2025-09-06 18:53:48 [INFO]: 🔒 Security: Helmet, CORS, Rate Limiting enabled {"service":"ip-tracker-server"}
+2025-09-06 18:53:48 [INFO]: 📡 Socket.IO: Real-time tracking enabled {"service":"ip-tracker-server"}
+2025-09-06 18:53:48 [INFO]: 🗄️  Database: MongoDB connected {"service":"ip-tracker-server"}
+2025-09-06 18:53:48 [INFO]: 🎯 Features: VPN Detection: ON {"service":"ip-tracker-server"}
+2025-09-06 18:53:48 [INFO]: 🎯 Features: Device Fingerprinting: ON {"service":"ip-tracker-server"}
+2025-09-06 18:53:48 [INFO]: 🎯 Features: Real-time Tracking: ON {"service":"ip-tracker-server"}
+2025-09-06 18:53:48 [INFO]: 🎯 Features: Payment Integration: ON {"service":"ip-tracker-server"}
+2025-09-06 18:53:51 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:53:51 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:53:51 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"GET","url":"/","status":304,"duration":"352ms","ip":"::1","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"}
+2025-09-06 18:53:51 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:53:51 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:53:51 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"GET","url":"/","status":304,"duration":"191ms","ip":"::1","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"}
+2025-09-06 18:54:03 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:54:03 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:54:03 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"GET","url":"/","status":304,"duration":"39ms","ip":"::1","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"}
+2025-09-06 18:54:03 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:54:03 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:54:03 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"GET","url":"/","status":304,"duration":"34ms","ip":"::1","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"}
+2025-09-06 18:54:18 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:54:18 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:54:18 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"GET","url":"/","status":304,"duration":"45ms","ip":"::1","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"}
+2025-09-06 18:54:18 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:54:18 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:54:18 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"GET","url":"/","status":304,"duration":"48ms","ip":"::1","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"}
+2025-09-06 18:54:29 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:54:29 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:54:29 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"GET","url":"/","status":304,"duration":"59ms","ip":"::1","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"}
+2025-09-06 18:54:29 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:54:29 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:54:29 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"GET","url":"/","status":304,"duration":"69ms","ip":"::1","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"}
+2025-09-06 18:54:37 [INFO]: Dashboard connected: {"service":"ip-tracker-server"}
+2025-09-06 18:54:37 [INFO]: Dashboard connected: {"service":"ip-tracker-server"}
+2025-09-06 18:54:37 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:54:37 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:54:37 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:54:37 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:54:37 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"GET","url":"/security-stats","status":200,"duration":"78ms","ip":"::1","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"}
+2025-09-06 18:54:37 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:54:37 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:54:37 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"GET","url":"/overview","status":200,"duration":"115ms","ip":"::1","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"}
+2025-09-06 18:54:37 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"GET","url":"/security-stats","status":200,"duration":"47ms","ip":"::1","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"}
+2025-09-06 18:54:37 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:54:37 [INFO]: User authenticated: ankitdos14@gmail.com (68bc3084d6a26049ad391e26) {"service":"ip-tracker-server"}
+2025-09-06 18:54:37 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"GET","url":"/overview","status":200,"duration":"57ms","ip":"::1","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"}
+2025-09-06 18:55:33 [INFO]: Received SIGINT. Starting graceful shutdown... {"service":"ip-tracker-server"}
+2025-09-06 18:55:33 [INFO]: Dashboard disconnected: {"service":"ip-tracker-server"}
+2025-09-06 18:55:33 [INFO]: Dashboard disconnected: {"service":"ip-tracker-server"}
+2025-09-06 19:17:03 [INFO]: 🚀 IP Tracker Server running on port 5000 {"service":"ip-tracker-server"}
+2025-09-06 19:17:03 [INFO]: 📊 Environment: development {"service":"ip-tracker-server"}
+2025-09-06 19:17:03 [INFO]: 🔒 Security: Helmet, CORS, Rate Limiting enabled {"service":"ip-tracker-server"}
+2025-09-06 19:17:03 [INFO]: 📡 Socket.IO: Real-time tracking enabled {"service":"ip-tracker-server"}
+2025-09-06 19:17:03 [INFO]: 🗄️  Database: MongoDB connected {"service":"ip-tracker-server"}
+2025-09-06 19:17:03 [INFO]: 🎯 Features: VPN Detection: ON {"service":"ip-tracker-server"}
+2025-09-06 19:17:03 [INFO]: 🎯 Features: Device Fingerprinting: ON {"service":"ip-tracker-server"}
+2025-09-06 19:17:03 [INFO]: 🎯 Features: Real-time Tracking: ON {"service":"ip-tracker-server"}
+2025-09-06 19:17:03 [INFO]: 🎯 Features: Payment Integration: ON {"service":"ip-tracker-server"}
+2025-09-06 19:17:11 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"HEAD","url":"/tracking-script.js","status":200,"duration":"5ms","ip":"::1","userAgent":"curl/8.14.1"}
+2025-09-06 19:17:17 [ERROR]: Global error handler: {"service":"ip-tracker-server","error":"Not allowed by CORS","url":"/tracking-script.js","method":"OPTIONS","ip":"::1","userAgent":"curl/8.14.1"}
+Error: Not allowed by CORS
+    at origin (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:104:22)
+    at /home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/cors/lib/index.js:204:7)
+    at Layer.handle [as handle_request] (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/layer.js:95:5)
+    at trim_prefix (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/index.js:328:13)
+    at /home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/index.js:286:9
+    at Function.process_params (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/index.js:346:12)
+    at next (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/index.js:280:10)
+    at internalNext (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/helmet/index.cjs:537:6)
+2025-09-06 19:17:44 [ERROR]: Uncaught Exception: listen EADDRINUSE: address already in use :::5000 {"service":"ip-tracker-server","code":"EADDRINUSE","errno":-98,"syscall":"listen","address":"::","port":5000}
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:361:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-09-06 19:17:55 [ERROR]: Global error handler: {"service":"ip-tracker-server","error":"Not allowed by CORS","url":"/tracking-script.js","method":"OPTIONS","ip":"::1","userAgent":"curl/8.14.1"}
+Error: Not allowed by CORS
+    at origin (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:104:22)
+    at /home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/cors/lib/index.js:204:7)
+    at Layer.handle [as handle_request] (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/layer.js:95:5)
+    at trim_prefix (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/index.js:328:13)
+    at /home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/index.js:286:9
+    at Function.process_params (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/index.js:346:12)
+    at next (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/index.js:280:10)
+    at internalNext (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/helmet/index.cjs:537:6)
+2025-09-06 19:18:20 [ERROR]: Uncaught Exception: listen EADDRINUSE: address already in use :::5000 {"service":"ip-tracker-server","code":"EADDRINUSE","errno":-98,"syscall":"listen","address":"::","port":5000}
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:358:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-09-06 19:18:26 [ERROR]: Global error handler: {"service":"ip-tracker-server","error":"Not allowed by CORS","url":"/tracking-script.js","method":"OPTIONS","ip":"::1","userAgent":"curl/8.14.1"}
+Error: Not allowed by CORS
+    at origin (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:104:22)
+    at /home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/cors/lib/index.js:204:7)
+    at Layer.handle [as handle_request] (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/layer.js:95:5)
+    at trim_prefix (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/index.js:328:13)
+    at /home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/index.js:286:9
+    at Function.process_params (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/index.js:346:12)
+    at next (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/index.js:280:10)
+    at internalNext (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/helmet/index.cjs:537:6)
+2025-09-06 19:20:26 [ERROR]: Uncaught Exception: listen EADDRINUSE: address already in use :::5000 {"service":"ip-tracker-server","code":"EADDRINUSE","errno":-98,"syscall":"listen","address":"::","port":5000}
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:358:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-09-06 19:20:34 [ERROR]: Global error handler: {"service":"ip-tracker-server","error":"Not allowed by CORS","url":"/tracking-script.js","method":"OPTIONS","ip":"::1","userAgent":"curl/8.14.1"}
+Error: Not allowed by CORS
+    at origin (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:104:22)
+    at /home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/cors/lib/index.js:204:7)
+    at Layer.handle [as handle_request] (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/layer.js:95:5)
+    at trim_prefix (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/index.js:328:13)
+    at /home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/index.js:286:9
+    at Function.process_params (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/index.js:346:12)
+    at next (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/index.js:280:10)
+    at internalNext (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/helmet/index.cjs:537:6)
+2025-09-06 19:21:31 [ERROR]: Uncaught Exception: listen EADDRINUSE: address already in use :::5000 {"service":"ip-tracker-server","code":"EADDRINUSE","errno":-98,"syscall":"listen","address":"::","port":5000}
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:362:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-09-06 19:21:46 [ERROR]: Global error handler: {"service":"ip-tracker-server","error":"Not allowed by CORS","url":"/tracking-script.js","method":"OPTIONS","ip":"::1","userAgent":"curl/8.14.1"}
+Error: Not allowed by CORS
+    at origin (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:104:22)
+    at /home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/cors/lib/index.js:204:7)
+    at Layer.handle [as handle_request] (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/layer.js:95:5)
+    at trim_prefix (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/index.js:328:13)
+    at /home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/index.js:286:9
+    at Function.process_params (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/index.js:346:12)
+    at next (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/express/lib/router/index.js:280:10)
+    at internalNext (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/helmet/index.cjs:537:6)
+2025-09-06 19:22:58 [INFO]: Received SIGTERM. Starting graceful shutdown... {"service":"ip-tracker-server"}
+2025-09-06 19:22:58 [INFO]: HTTP server closed {"service":"ip-tracker-server"}
+2025-09-06 19:22:58 [INFO]: Socket.IO server closed {"service":"ip-tracker-server"}
+2025-09-06 19:23:19 [INFO]: 🚀 IP Tracker Server running on port 5000 {"service":"ip-tracker-server"}
+2025-09-06 19:23:19 [INFO]: 📊 Environment: development {"service":"ip-tracker-server"}
+2025-09-06 19:23:19 [INFO]: 🔒 Security: Helmet, CORS, Rate Limiting enabled {"service":"ip-tracker-server"}
+2025-09-06 19:23:19 [INFO]: 📡 Socket.IO: Real-time tracking enabled {"service":"ip-tracker-server"}
+2025-09-06 19:23:19 [INFO]: 🗄️  Database: MongoDB connected {"service":"ip-tracker-server"}
+2025-09-06 19:23:19 [INFO]: 🎯 Features: VPN Detection: ON {"service":"ip-tracker-server"}
+2025-09-06 19:23:19 [INFO]: 🎯 Features: Device Fingerprinting: ON {"service":"ip-tracker-server"}
+2025-09-06 19:23:19 [INFO]: 🎯 Features: Real-time Tracking: ON {"service":"ip-tracker-server"}
+2025-09-06 19:23:19 [INFO]: 🎯 Features: Payment Integration: ON {"service":"ip-tracker-server"}
+2025-09-06 19:24:43 [ERROR]: Uncaught Exception: listen EADDRINUSE: address already in use :::5000 {"service":"ip-tracker-server","code":"EADDRINUSE","errno":-98,"syscall":"listen","address":"::","port":5000}
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:357:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-09-06 19:25:02 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"HEAD","url":"/tracking-script.js","status":200,"duration":"2ms","ip":"::1","userAgent":"curl/8.14.1"}
+2025-09-06 19:25:47 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"GET","url":"/tracking-script.js","status":200,"duration":"2ms","ip":"::1","userAgent":"curl/8.14.1"}
