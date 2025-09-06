@@ -7593,3 +7593,82 @@ Error: listen EADDRINUSE: address already in use :::5000
     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
 2025-09-06 19:25:02 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"HEAD","url":"/tracking-script.js","status":200,"duration":"2ms","ip":"::1","userAgent":"curl/8.14.1"}
 2025-09-06 19:25:47 [INFO]: HTTP Request {"service":"ip-tracker-server","method":"GET","url":"/tracking-script.js","status":200,"duration":"2ms","ip":"::1","userAgent":"curl/8.14.1"}
+2025-09-06 19:35:23 [INFO]: Script added timestamp set for website: spaadvisor.in at Sat Sep 06 2025 19:35:23 GMT+0530 (India Standard Time) {"service":"ip-tracker-server"}
+2025-09-06 19:35:23 [WARN]: Geolocation service 1 failed for IP ::1: {"service":"ip-tracker-server"}
+2025-09-06 19:35:23 [WARN]: Geolocation service 2 failed for IP ::1: {"service":"ip-tracker-server"}
+2025-09-06 19:35:24 [WARN]: Geolocation service 3 failed for IP ::1: {"service":"ip-tracker-server"}
+2025-09-06 19:35:24 [INFO]: VPN Detection Result {"service":"ip-tracker-server","ip":"::1","result":{"isVpn":false,"isProxy":false,"isTor":false,"isHosting":false,"vpnProvider":null,"proxyType":null,"proxyLevel":"transparent"}}
+2025-09-06 19:35:24 [WARN]: Geolocation service 4 failed for IP ::1: {"service":"ip-tracker-server"}
+2025-09-06 19:35:24 [WARN]: Geolocation service 5 failed for IP ::1: {"service":"ip-tracker-server"}
+2025-09-06 19:35:24 [ERROR]: All geolocation services failed for IP: {"service":"ip-tracker-server"}
+2025-09-06 19:35:24 [ERROR]: Error tracking visit: {"service":"ip-tracker-server","error":"ipTrackingService.generateComputerId is not a function","ip":"::1","body":{"trackingCode":"64SZIV5QX7U53LBD","website":"spaadvisor.in","domain":"spaadvisor.in","page":"/","referer":"","url":"https://spaadvisor.in/","title":"Test Page","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36","timestamp":"2025-09-06T14:05:23.151Z"}}
+TypeError: ipTrackingService.generateComputerId is not a function
+    at /home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/routes/tracking.js:189:57
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-09-06 19:35:24 [WARN]: HTTP Request {"service":"ip-tracker-server","method":"POST","url":"/track","status":500,"duration":"1399ms","ip":"::1","userAgent":"curl/8.14.1"}
+2025-09-06 19:37:12 [ERROR]: Uncaught Exception: listen EADDRINUSE: address already in use :::5000 {"service":"ip-tracker-server","code":"EADDRINUSE","errno":-98,"syscall":"listen","address":"::","port":5000}
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:357:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-09-06 19:37:25 [WARN]: Geolocation service 1 failed for IP ::1: {"service":"ip-tracker-server"}
+2025-09-06 19:37:25 [WARN]: Geolocation service 2 failed for IP ::1: {"service":"ip-tracker-server"}
+2025-09-06 19:37:25 [WARN]: Geolocation service 3 failed for IP ::1: {"service":"ip-tracker-server"}
+2025-09-06 19:37:26 [WARN]: Geolocation service 4 failed for IP ::1: {"service":"ip-tracker-server"}
+2025-09-06 19:37:26 [WARN]: Geolocation service 5 failed for IP ::1: {"service":"ip-tracker-server"}
+2025-09-06 19:37:26 [ERROR]: All geolocation services failed for IP: {"service":"ip-tracker-server"}
+2025-09-06 19:37:26 [ERROR]: Error tracking visit: {"service":"ip-tracker-server","error":"ipTrackingService.generateComputerId is not a function","ip":"::1","body":{"trackingCode":"64SZIV5QX7U53LBD","website":"spaadvisor.in","domain":"spaadvisor.in","page":"/","referer":"","url":"https://spaadvisor.in/","title":"Test Page","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36","timestamp":"2025-09-06T14:07:24.874Z"}}
+TypeError: ipTrackingService.generateComputerId is not a function
+    at /home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/routes/tracking.js:189:57
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-09-06 19:37:26 [WARN]: HTTP Request {"service":"ip-tracker-server","method":"POST","url":"/track","status":500,"duration":"1406ms","ip":"::1","userAgent":"curl/8.14.1"}
+2025-09-06 19:38:30 [INFO]: Received SIGTERM. Starting graceful shutdown... {"service":"ip-tracker-server"}
+2025-09-06 19:38:30 [INFO]: HTTP server closed {"service":"ip-tracker-server"}
+2025-09-06 19:38:30 [INFO]: Socket.IO server closed {"service":"ip-tracker-server"}
+2025-09-06 19:38:30 [INFO]: MongoDB connection closed {"service":"ip-tracker-server"}
+2025-09-06 19:38:44 [INFO]: 🚀 IP Tracker Server running on port 5000 {"service":"ip-tracker-server"}
+2025-09-06 19:38:44 [INFO]: 📊 Environment: development {"service":"ip-tracker-server"}
+2025-09-06 19:38:44 [INFO]: 🔒 Security: Helmet, CORS, Rate Limiting enabled {"service":"ip-tracker-server"}
+2025-09-06 19:38:44 [INFO]: 📡 Socket.IO: Real-time tracking enabled {"service":"ip-tracker-server"}
+2025-09-06 19:38:44 [INFO]: 🗄️  Database: MongoDB connected {"service":"ip-tracker-server"}
+2025-09-06 19:38:44 [INFO]: 🎯 Features: VPN Detection: ON {"service":"ip-tracker-server"}
+2025-09-06 19:38:44 [INFO]: 🎯 Features: Device Fingerprinting: ON {"service":"ip-tracker-server"}
+2025-09-06 19:38:44 [INFO]: 🎯 Features: Real-time Tracking: ON {"service":"ip-tracker-server"}
+2025-09-06 19:38:44 [INFO]: 🎯 Features: Payment Integration: ON {"service":"ip-tracker-server"}
+2025-09-06 19:38:55 [WARN]: Geolocation service 1 failed for IP ::1: {"service":"ip-tracker-server"}
+2025-09-06 19:38:55 [WARN]: Geolocation service 2 failed for IP ::1: {"service":"ip-tracker-server"}
+2025-09-06 19:38:56 [INFO]: VPN Detection Result {"service":"ip-tracker-server","ip":"::1","result":{"isVpn":false,"isProxy":false,"isTor":false,"isHosting":false,"vpnProvider":null,"proxyType":null,"proxyLevel":"transparent"}}
+2025-09-06 19:38:56 [WARN]: Geolocation service 3 failed for IP ::1: {"service":"ip-tracker-server"}
+2025-09-06 19:38:56 [WARN]: Geolocation service 4 failed for IP ::1: {"service":"ip-tracker-server"}
+2025-09-06 19:38:56 [WARN]: Geolocation service 5 failed for IP ::1: {"service":"ip-tracker-server"}
+2025-09-06 19:38:56 [ERROR]: All geolocation services failed for IP: {"service":"ip-tracker-server"}
+2025-09-06 19:38:56 [ERROR]: Error tracking visit: {"service":"ip-tracker-server","error":"Visit validation failed: device: Cast to string failed for value \"{ model: 'Unknown', type: 'Unknown', vendor: 'Unknown' }\" (type Object) at path \"device\"","ip":"::1","body":{"trackingCode":"64SZIV5QX7U53LBD","website":"spaadvisor.in","domain":"spaadvisor.in","page":"/","referer":"","url":"https://spaadvisor.in/","title":"Test Page","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36","timestamp":"2025-09-06T14:08:55.112Z"}}
+ValidationError: Visit validation failed: device: Cast to string failed for value "{ model: 'Unknown', type: 'Unknown', vendor: 'Unknown' }" (type Object) at path "device"
+    at Document.invalidate (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/mongoose/lib/document.js:3219:32)
+    at model.$set (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/mongoose/lib/document.js:1464:12)
+    at model.$set (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/mongoose/lib/document.js:1119:16)
+    at model.Document (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/mongoose/lib/document.js:165:12)
+    at model.Model (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/mongoose/lib/model.js:123:12)
+    at new model (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/mongoose/lib/model.js:4758:15)
+    at /home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/routes/tracking.js:272:23
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-09-06 19:38:56 [WARN]: HTTP Request {"service":"ip-tracker-server","method":"POST","url":"/track","status":500,"duration":"1457ms","ip":"::1","userAgent":"curl/8.14.1"}
+2025-09-06 19:40:31 [WARN]: Geolocation service 1 failed for IP ::1: {"service":"ip-tracker-server"}
+2025-09-06 19:40:31 [WARN]: Geolocation service 2 failed for IP ::1: {"service":"ip-tracker-server"}
+2025-09-06 19:40:31 [WARN]: Geolocation service 3 failed for IP ::1: {"service":"ip-tracker-server"}
+2025-09-06 19:40:32 [WARN]: Geolocation service 4 failed for IP ::1: {"service":"ip-tracker-server"}
+2025-09-06 19:40:32 [WARN]: Geolocation service 5 failed for IP ::1: {"service":"ip-tracker-server"}
+2025-09-06 19:40:32 [ERROR]: All geolocation services failed for IP: {"service":"ip-tracker-server"}
+2025-09-06 19:40:32 [ERROR]: Error tracking visit: {"service":"ip-tracker-server","error":"Visit validation failed: device: Cast to string failed for value \"{ model: 'Unknown', type: 'Unknown', vendor: 'Unknown' }\" (type Object) at path \"device\"","ip":"::1","body":{"trackingCode":"64SZIV5QX7U53LBD","website":"spaadvisor.in","domain":"spaadvisor.in","page":"/","referer":"","url":"https://spaadvisor.in/","title":"Test Page","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36","timestamp":"2025-09-06T14:10:30.573Z"}}
+ValidationError: Visit validation failed: device: Cast to string failed for value "{ model: 'Unknown', type: 'Unknown', vendor: 'Unknown' }" (type Object) at path "device"
+    at Document.invalidate (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/mongoose/lib/document.js:3219:32)
+    at model.$set (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/mongoose/lib/document.js:1464:12)
+    at model.$set (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/mongoose/lib/document.js:1119:16)
+    at model.Document (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/mongoose/lib/document.js:165:12)
+    at model.Model (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/mongoose/lib/model.js:123:12)
+    at new model (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/node_modules/mongoose/lib/model.js:4758:15)
+    at /home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/routes/tracking.js:272:23
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-09-06 19:40:32 [WARN]: HTTP Request {"service":"ip-tracker-server","method":"POST","url":"/track","status":500,"duration":"1671ms","ip":"::1","userAgent":"curl/8.14.1"}

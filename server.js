@@ -150,7 +150,7 @@ app.use(limiter);
 
 // Stricter rate limiting for tracking endpoint
 const trackingLimiter = rateLimit({
-    windowMs: 10 * 60 * 1000, // 1 minute
+    windowMs: 10 * 60 * 1000, // 10 minute
     max: 500, // limit each IP to 50 tracking requests per minute
     message: {
         error: 'Too many tracking requests from this IP, please try again later.',

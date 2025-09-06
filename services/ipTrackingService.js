@@ -24,6 +24,43 @@ class IPTrackingService {
     }
 
     // ============================================================================
+    // DEVICE IDENTIFICATION
+    // ============================================================================
+    
+    generateComputerId() {
+        // Generate a simple computer ID based on timestamp and random number
+        return 'comp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    hashString(str) {
+        let hash = 0;
+        if (str.length === 0) return hash.toString();
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        return Math.abs(hash).toString(36);
+    }
+
+    generateDeviceFingerprint(deviceInfo) {
+        const fingerprintData = {
+            screenResolution: deviceInfo.screenResolution || 'unknown',
+            colorDepth: deviceInfo.colorDepth || 'unknown',
+            platform: deviceInfo.platform || 'unknown',
+            language: deviceInfo.language || 'unknown',
+            timezone: deviceInfo.timezone || 'unknown',
+            hardwareConcurrency: deviceInfo.hardwareConcurrency || 'unknown',
+            maxTouchPoints: deviceInfo.maxTouchPoints || 'unknown',
+            cookieEnabled: deviceInfo.cookieEnabled || false,
+            doNotTrack: deviceInfo.doNotTrack || 'unknown',
+            online: deviceInfo.online || false
+        };
+        
+        return this.hashString(JSON.stringify(fingerprintData));
+    }
+
+    // ============================================================================
     // USER AGENT PARSING
     // ============================================================================
     
