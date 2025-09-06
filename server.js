@@ -30,6 +30,9 @@ const { validateTrackingData } = require('./middleware/validation');
 const app = express();
 const server = http.createServer(app);
 
+// Trust proxy for production deployment (behind reverse proxy/load balancer)
+app.set('trust proxy', true);
+
 // ============================================================================
 // SOCKET.IO CONFIGURATION
 // ============================================================================

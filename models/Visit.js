@@ -99,11 +99,12 @@ const visitSchema = new mongoose.Schema({
         version: String,
         platform: String
     },
-    device: {
-        type: String,
-        model: String,
-        vendor: String
-    },
+    device: mongoose.Schema.Types.Mixed, // Allow any type to handle legacy data
+    // deviceInfo: {
+    //     deviceType: String,
+    //     model: String,
+    //     vendor: String
+    // },
     
     // Screen and display
     screenResolution: String,

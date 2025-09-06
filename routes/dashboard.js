@@ -1050,7 +1050,7 @@ async function getVisitorDetails(ip, websites, timeRange, scriptAddedAt) {
                     userAgent: { $first: '$userAgent' },
                     browser: { $first: '$browser' },
                     os: { $first: '$os' },
-                    device: { $first: '$device' },
+                    // device: { $first: '$device' },
                     screenResolution: { $first: '$screenResolution' },
                     colorDepth: { $first: '$colorDepth' },
                     pixelRatio: { $first: '$pixelRatio' },
@@ -1136,9 +1136,9 @@ async function getVisitorDetails(ip, websites, timeRange, scriptAddedAt) {
             os: stats.os && typeof stats.os === 'object' ? stats.os : 
                 stats.os ? { name: stats.os, version: '' } : 
                 { name: 'Unknown', version: '' },
-            device: stats.device && typeof stats.device === 'object' ? stats.device : 
-                   stats.device ? { name: stats.device, version: '' } : 
-                   { name: 'Unknown', version: '' },
+            // device: stats.device && typeof stats.device === 'object' ? stats.device : 
+            //        stats.device ? { name: stats.device, version: '' } : 
+            //        { name: 'Unknown', version: '' },
             screenResolution: stats.screenResolution || 'Unknown',
             colorDepth: stats.colorDepth || 'Unknown',
             pixelRatio: stats.pixelRatio || 'Unknown',

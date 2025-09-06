@@ -423,11 +423,11 @@
                         version: this.getOSInfo().version,
                         platform: navigator.platform
                     },
-                    device: {
-                        type: this.getDeviceType(),
-                        model: 'unknown',
-                        vendor: 'unknown'
-                    },
+                    // device: {
+                    //     type: this.getDeviceType(),
+                    //     model: 'unknown',
+                    //     vendor: 'unknown'
+                    // },
                     
                     // Screen and display
                     screenResolution: deviceInfo.screenResolution,

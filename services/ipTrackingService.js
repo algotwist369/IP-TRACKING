@@ -69,7 +69,7 @@ class IPTrackingService {
             const parser = new UAParser(userAgent);
             const result = parser.getResult();
             
-            return {
+            const returnData = {
                 browser: {
                     name: result.browser.name || 'Unknown',
                     version: result.browser.version || 'Unknown',
@@ -79,9 +79,9 @@ class IPTrackingService {
                     name: result.os.name || 'Unknown',
                     version: result.os.version || 'Unknown'
                 },
-                device: {
+                deviceInfo: {
                     model: result.device.model || 'Unknown',
-                    type: result.device.type || 'Unknown',
+                    deviceType: result.device.type || 'Unknown',
                     vendor: result.device.vendor || 'Unknown'
                 },
                 engine: {
@@ -92,12 +92,13 @@ class IPTrackingService {
                     architecture: result.cpu.architecture || 'Unknown'
                 }
             };
+            return returnData;
         } catch (error) {
             logger.error('Error parsing user agent:', error);
             return {
                 browser: { name: 'Unknown', version: 'Unknown', major: 'Unknown' },
                 os: { name: 'Unknown', version: 'Unknown' },
-                device: { model: 'Unknown', type: 'Unknown', vendor: 'Unknown' },
+                // device: { model: 'Unknown', type: 'Unknown', vendor: 'Unknown' },
                 engine: { name: 'Unknown', version: 'Unknown' },
                 cpu: { architecture: 'Unknown' }
             };

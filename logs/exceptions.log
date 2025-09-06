@@ -4645,3 +4645,120 @@ Error: listen EADDRINUSE: address already in use :::5000
     at Server.listen (node:net:2102:7)
     at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:357:16)
     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-09-06 19:53:00 [ERROR]: uncaughtException: listen EADDRINUSE: address already in use :::5000
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:360:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {"error":{"code":"EADDRINUSE","errno":-98,"syscall":"listen","address":"::","port":5000},"exception":true,"date":"Sat Sep 06 2025 19:53:00 GMT+0530 (India Standard Time)","process":{"pid":52318,"uid":1000,"gid":1000,"cwd":"/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server","execPath":"/usr/bin/node","version":"v22.18.0","argv":["/usr/bin/node","/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js"],"memoryUsage":{"rss":256274432,"heapTotal":67182592,"heapUsed":33332264,"external":167915505,"arrayBuffers":164429754}},"os":{"loadavg":[1.98,2.54,2.66],"uptime":2963.72},"trace":[{"column":16,"file":"node:net","function":"Server.setupListenHandle [as _listen2]","line":1940,"method":"setupListenHandle [as _listen2]","native":false},{"column":12,"file":"node:net","function":"listenInCluster","line":1997,"method":null,"native":false},{"column":7,"file":"node:net","function":"Server.listen","line":2102,"method":"listen","native":false},{"column":16,"file":"/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js","function":"startServer","line":360,"method":null,"native":false},{"column":5,"file":"node:internal/process/task_queues","function":"process.processTicksAndRejections","line":105,"method":"processTicksAndRejections","native":false}],"service":"ip-tracker-server"}
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:360:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-09-06 19:54:08 [ERROR]: uncaughtException: listen EADDRINUSE: address already in use :::5000
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:360:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {"error":{"code":"EADDRINUSE","errno":-98,"syscall":"listen","address":"::","port":5000},"exception":true,"date":"Sat Sep 06 2025 19:54:08 GMT+0530 (India Standard Time)","process":{"pid":54448,"uid":1000,"gid":1000,"cwd":"/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server","execPath":"/usr/bin/node","version":"v22.18.0","argv":["/usr/bin/node","/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js"],"memoryUsage":{"rss":257134592,"heapTotal":66920448,"heapUsed":33457456,"external":167915505,"arrayBuffers":164429754}},"os":{"loadavg":[2.72,2.62,2.67],"uptime":3031.63},"trace":[{"column":16,"file":"node:net","function":"Server.setupListenHandle [as _listen2]","line":1940,"method":"setupListenHandle [as _listen2]","native":false},{"column":12,"file":"node:net","function":"listenInCluster","line":1997,"method":null,"native":false},{"column":7,"file":"node:net","function":"Server.listen","line":2102,"method":"listen","native":false},{"column":16,"file":"/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js","function":"startServer","line":360,"method":null,"native":false},{"column":5,"file":"node:internal/process/task_queues","function":"process.processTicksAndRejections","line":105,"method":"processTicksAndRejections","native":false}],"service":"ip-tracker-server"}
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:360:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-09-06 19:55:23 [ERROR]: uncaughtException: listen EADDRINUSE: address already in use :::5000
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:360:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {"error":{"code":"EADDRINUSE","errno":-98,"syscall":"listen","address":"::","port":5000},"exception":true,"date":"Sat Sep 06 2025 19:55:23 GMT+0530 (India Standard Time)","process":{"pid":56573,"uid":1000,"gid":1000,"cwd":"/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server","execPath":"/usr/bin/node","version":"v22.18.0","argv":["/usr/bin/node","/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js"],"memoryUsage":{"rss":257708032,"heapTotal":67182592,"heapUsed":33484200,"external":167915505,"arrayBuffers":164429754}},"os":{"loadavg":[2.07,2.47,2.62],"uptime":3106.4},"trace":[{"column":16,"file":"node:net","function":"Server.setupListenHandle [as _listen2]","line":1940,"method":"setupListenHandle [as _listen2]","native":false},{"column":12,"file":"node:net","function":"listenInCluster","line":1997,"method":null,"native":false},{"column":7,"file":"node:net","function":"Server.listen","line":2102,"method":"listen","native":false},{"column":16,"file":"/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js","function":"startServer","line":360,"method":null,"native":false},{"column":5,"file":"node:internal/process/task_queues","function":"process.processTicksAndRejections","line":105,"method":"processTicksAndRejections","native":false}],"service":"ip-tracker-server"}
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:360:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-09-06 20:01:15 [ERROR]: uncaughtException: listen EADDRINUSE: address already in use :::5000
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:360:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {"error":{"code":"EADDRINUSE","errno":-98,"syscall":"listen","address":"::","port":5000},"exception":true,"date":"Sat Sep 06 2025 20:01:15 GMT+0530 (India Standard Time)","process":{"pid":64399,"uid":1000,"gid":1000,"cwd":"/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server","execPath":"/usr/bin/node","version":"v22.18.0","argv":["/usr/bin/node","/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js"],"memoryUsage":{"rss":257122304,"heapTotal":67182592,"heapUsed":33406112,"external":167915505,"arrayBuffers":164429754}},"os":{"loadavg":[3.21,2.61,2.61],"uptime":3458.76},"trace":[{"column":16,"file":"node:net","function":"Server.setupListenHandle [as _listen2]","line":1940,"method":"setupListenHandle [as _listen2]","native":false},{"column":12,"file":"node:net","function":"listenInCluster","line":1997,"method":null,"native":false},{"column":7,"file":"node:net","function":"Server.listen","line":2102,"method":"listen","native":false},{"column":16,"file":"/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js","function":"startServer","line":360,"method":null,"native":false},{"column":5,"file":"node:internal/process/task_queues","function":"process.processTicksAndRejections","line":105,"method":"processTicksAndRejections","native":false}],"service":"ip-tracker-server"}
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:360:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-09-06 20:05:38 [ERROR]: uncaughtException: listen EADDRINUSE: address already in use :::5000
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:360:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {"error":{"code":"EADDRINUSE","errno":-98,"syscall":"listen","address":"::","port":5000},"exception":true,"date":"Sat Sep 06 2025 20:05:38 GMT+0530 (India Standard Time)","process":{"pid":80157,"uid":1000,"gid":1000,"cwd":"/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server","execPath":"/usr/bin/node","version":"v22.18.0","argv":["/usr/bin/node","/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js"],"memoryUsage":{"rss":256954368,"heapTotal":66920448,"heapUsed":33345280,"external":167915505,"arrayBuffers":164429754}},"os":{"loadavg":[2.37,2.48,2.54],"uptime":3721.42},"trace":[{"column":16,"file":"node:net","function":"Server.setupListenHandle [as _listen2]","line":1940,"method":"setupListenHandle [as _listen2]","native":false},{"column":12,"file":"node:net","function":"listenInCluster","line":1997,"method":null,"native":false},{"column":7,"file":"node:net","function":"Server.listen","line":2102,"method":"listen","native":false},{"column":16,"file":"/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js","function":"startServer","line":360,"method":null,"native":false},{"column":5,"file":"node:internal/process/task_queues","function":"process.processTicksAndRejections","line":105,"method":"processTicksAndRejections","native":false}],"service":"ip-tracker-server"}
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:360:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-09-06 20:07:21 [ERROR]: uncaughtException: listen EADDRINUSE: address already in use :::5000
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:360:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {"error":{"code":"EADDRINUSE","errno":-98,"syscall":"listen","address":"::","port":5000},"exception":true,"date":"Sat Sep 06 2025 20:07:21 GMT+0530 (India Standard Time)","process":{"pid":83133,"uid":1000,"gid":1000,"cwd":"/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server","execPath":"/usr/bin/node","version":"v22.18.0","argv":["/usr/bin/node","/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js"],"memoryUsage":{"rss":256294912,"heapTotal":66658304,"heapUsed":33403784,"external":167915505,"arrayBuffers":164429754}},"os":{"loadavg":[2.53,2.49,2.54],"uptime":3825.16},"trace":[{"column":16,"file":"node:net","function":"Server.setupListenHandle [as _listen2]","line":1940,"method":"setupListenHandle [as _listen2]","native":false},{"column":12,"file":"node:net","function":"listenInCluster","line":1997,"method":null,"native":false},{"column":7,"file":"node:net","function":"Server.listen","line":2102,"method":"listen","native":false},{"column":16,"file":"/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js","function":"startServer","line":360,"method":null,"native":false},{"column":5,"file":"node:internal/process/task_queues","function":"process.processTicksAndRejections","line":105,"method":"processTicksAndRejections","native":false}],"service":"ip-tracker-server"}
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:360:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-09-06 20:20:43 [ERROR]: uncaughtException: listen EADDRINUSE: address already in use :::5000
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:360:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {"error":{"code":"EADDRINUSE","errno":-98,"syscall":"listen","address":"::","port":5000},"exception":true,"date":"Sat Sep 06 2025 20:20:42 GMT+0530 (India Standard Time)","process":{"pid":108841,"uid":1000,"gid":1000,"cwd":"/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server","execPath":"/usr/bin/node","version":"v22.18.0","argv":["/usr/bin/node","/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js"],"memoryUsage":{"rss":257249280,"heapTotal":67444736,"heapUsed":33369480,"external":167915505,"arrayBuffers":164429754}},"os":{"loadavg":[3.51,2.11,2.09],"uptime":4626.29},"trace":[{"column":16,"file":"node:net","function":"Server.setupListenHandle [as _listen2]","line":1940,"method":"setupListenHandle [as _listen2]","native":false},{"column":12,"file":"node:net","function":"listenInCluster","line":1997,"method":null,"native":false},{"column":7,"file":"node:net","function":"Server.listen","line":2102,"method":"listen","native":false},{"column":16,"file":"/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js","function":"startServer","line":360,"method":null,"native":false},{"column":5,"file":"node:internal/process/task_queues","function":"process.processTicksAndRejections","line":105,"method":"processTicksAndRejections","native":false}],"service":"ip-tracker-server"}
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:360:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-09-06 20:22:54 [ERROR]: uncaughtException: listen EADDRINUSE: address already in use :::5000
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:360:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {"error":{"code":"EADDRINUSE","errno":-98,"syscall":"listen","address":"::","port":5000},"exception":true,"date":"Sat Sep 06 2025 20:22:54 GMT+0530 (India Standard Time)","process":{"pid":112062,"uid":1000,"gid":1000,"cwd":"/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server","execPath":"/usr/bin/node","version":"v22.18.0","argv":["/usr/bin/node","/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js"],"memoryUsage":{"rss":257609728,"heapTotal":66396160,"heapUsed":33486984,"external":167915505,"arrayBuffers":164429754}},"os":{"loadavg":[3.87,2.73,2.32],"uptime":4757.33},"trace":[{"column":16,"file":"node:net","function":"Server.setupListenHandle [as _listen2]","line":1940,"method":"setupListenHandle [as _listen2]","native":false},{"column":12,"file":"node:net","function":"listenInCluster","line":1997,"method":null,"native":false},{"column":7,"file":"node:net","function":"Server.listen","line":2102,"method":"listen","native":false},{"column":16,"file":"/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js","function":"startServer","line":360,"method":null,"native":false},{"column":5,"file":"node:internal/process/task_queues","function":"process.processTicksAndRejections","line":105,"method":"processTicksAndRejections","native":false}],"service":"ip-tracker-server"}
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:360:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-09-06 20:24:32 [ERROR]: uncaughtException: listen EADDRINUSE: address already in use :::5000
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:360:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {"error":{"code":"EADDRINUSE","errno":-98,"syscall":"listen","address":"::","port":5000},"exception":true,"date":"Sat Sep 06 2025 20:24:32 GMT+0530 (India Standard Time)","process":{"pid":114776,"uid":1000,"gid":1000,"cwd":"/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server","execPath":"/usr/bin/node","version":"v22.18.0","argv":["/usr/bin/node","/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js"],"memoryUsage":{"rss":257191936,"heapTotal":66920448,"heapUsed":33338616,"external":167915505,"arrayBuffers":164429754}},"os":{"loadavg":[2.67,2.58,2.31],"uptime":4855.34},"trace":[{"column":16,"file":"node:net","function":"Server.setupListenHandle [as _listen2]","line":1940,"method":"setupListenHandle [as _listen2]","native":false},{"column":12,"file":"node:net","function":"listenInCluster","line":1997,"method":null,"native":false},{"column":7,"file":"node:net","function":"Server.listen","line":2102,"method":"listen","native":false},{"column":16,"file":"/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js","function":"startServer","line":360,"method":null,"native":false},{"column":5,"file":"node:internal/process/task_queues","function":"process.processTicksAndRejections","line":105,"method":"processTicksAndRejections","native":false}],"service":"ip-tracker-server"}
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at startServer (/home/ankit/Desktop/DOS/Projects/IP-Tracker/Server/server.js:360:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)

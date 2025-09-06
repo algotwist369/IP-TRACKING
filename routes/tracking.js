@@ -12,7 +12,7 @@ const ipTrackingService = new IPTrackingService();
 // MAIN TRACKING ENDPOINT
 // ============================================================================
 
-router.post('/track', validateTrackingData, async (req, res) => {
+router.post('/track', async (req, res) => {
     try {
         const startTime = Date.now();
         
@@ -38,7 +38,7 @@ router.post('/track', validateTrackingData, async (req, res) => {
             userAgentHash,
             browser: clientBrowser,
             os: clientOS,
-            device: clientDevice,
+            // deviceInfo: clientDevice,
             screenResolution,
             colorDepth,
             pixelRatio,
@@ -195,7 +195,7 @@ router.post('/track', validateTrackingData, async (req, res) => {
             // Browser capabilities (use parsed data if client data is not available)
             browser: clientBrowser || userAgentData.browser,
             os: clientOS || userAgentData.os,
-            device: clientDevice || userAgentData.device,
+            // deviceInfo: clientDevice || userAgentData.device,
             
             // Screen and display
             screenResolution,
@@ -286,7 +286,7 @@ router.post('/track', validateTrackingData, async (req, res) => {
                 isp: visit.isp,
                 browser: visit.browser,
                 os: visit.os,
-                device: visit.device,
+                // deviceInfo: visit.deviceInfo,
                 screenResolution: visit.screenResolution,
                 userAgent: visit.userAgent,
                 referer: visit.referer,
