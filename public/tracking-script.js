@@ -171,9 +171,6 @@
     function trackVisit() {
         const trackingData = collectTrackingData();
         
-        // Update session visit count AFTER collecting data
-        updateSession();
-        
         // Log tracking attempt (for debugging)
         console.log('Tracking visit:', {
             website: trackingData.website,
@@ -193,7 +190,10 @@
         })
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
+            if (data.success && data.tracked === true) {
+                // Only update session if server successfully tracked the visit
+                updateSession();
+                
                 console.log('Visit tracked successfully:', data.message);
                 if (data.sessionId) {
                     console.log('Session ID:', data.sessionId);
@@ -202,11 +202,13 @@
                     console.log('Visit type:', data.visitType);
                 }
             } else {
-                console.warn('Tracking failed:', data.message);
+                console.log('Visit not tracked:', data.message);
+                // Don't update session if tracking was skipped or failed
             }
         })
         .catch(error => {
             console.error('Error tracking visit:', error);
+            // Don't update session if there was an error
         });
     }
 

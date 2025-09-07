@@ -1,3 +1,5 @@
+// update code for tracking visit
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -611,7 +613,8 @@ app.post('/api/track', async (req, res) => {
                 success: true, 
                 message: 'Internal navigation - not tracked',
                 sessionId: session.sessionId,
-                visitType: visitType
+                visitType: visitType,
+                tracked: false
             });
         }
 
@@ -675,7 +678,8 @@ app.post('/api/track', async (req, res) => {
             message: 'Visit tracked',
             sessionId: session.sessionId,
             visitType: visitType,
-            isFirstVisit: isNewSession
+            isFirstVisit: isNewSession,
+            tracked: true
         });
     } catch (error) {
         console.error('Error tracking visit:', error);
