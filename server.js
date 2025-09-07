@@ -41,7 +41,7 @@ const corsOptions = {
 
 
 const io = socketIo(server, {
-            cors: corsOptions
+    cors: corsOptions
 });
 
 // Middleware
@@ -73,7 +73,7 @@ const connectDB = async () => {
 
 
 connectDB();
- 
+
 // Visit Schema
 const visitSchema = new mongoose.Schema({
     ip: {
@@ -215,16 +215,16 @@ function getVisitType(referer, website) {
     if (!referer) {
         return 'direct'; // No referer = direct visit
     }
-    
+
     try {
         const refererUrl = new URL(referer);
         const websiteUrl = new URL(website.startsWith('http') ? website : `https://${website}`);
-        
+
         // Same domain = internal navigation
         if (refererUrl.hostname === websiteUrl.hostname) {
             return 'internal';
         }
-        
+
         // Different domain = external visit
         return 'external';
     } catch (error) {
@@ -236,49 +236,62 @@ function getVisitType(referer, website) {
 // Check if referer is from a search engine or social media (external traffic)
 function isExternalTraffic(referer) {
     if (!referer) return false;
-    
+
     try {
         const refererUrl = new URL(referer);
         const hostname = refererUrl.hostname.toLowerCase();
-        
+
         // Search engines
         const searchEngines = [
             'google.com', 'google.co.in', 'google.co.uk', 'google.ca', 'google.com.au',
             'bing.com', 'yahoo.com', 'duckduckgo.com', 'baidu.com', 'yandex.com',
             'ask.com', 'aol.com'
         ];
-        
+
         // Social media platforms
         const socialMedia = [
             'facebook.com', 'twitter.com', 'linkedin.com', 'instagram.com',
             'youtube.com', 'tiktok.com', 'pinterest.com', 'reddit.com',
             'whatsapp.com', 'telegram.org', 'discord.com'
         ];
-        
+
         // Check if referer is from search engine or social media
         return searchEngines.some(engine => hostname.includes(engine)) ||
-               socialMedia.some(social => hostname.includes(social));
+            socialMedia.some(social => hostname.includes(social));
     } catch (error) {
         return false;
     }
 }
 
-// Session management functions
+// Session management functions - FIXED VERSION
 async function getOrCreateSession(ip, website, computerId, deviceFingerprint, referer, userAgent) {
     try {
-        // Try to find existing active session
+        // Create a unique session key based on IP, computerId, and deviceFingerprint
+        const sessionKey = `${ip}-${computerId || 'unknown'}-${deviceFingerprint || 'unknown'}`;
+
+        // Try to find existing active session using the session key
         let session = await Session.findOne({
-            ip: ip,
-            website: website,
-            computerId: computerId,
-            deviceFingerprint: deviceFingerprint,
-            expiresAt: { $gt: new Date() }
+            $or: [
+                {
+                    ip: ip,
+                    website: website,
+                    computerId: computerId,
+                    deviceFingerprint: deviceFingerprint,
+                    expiresAt: { $gt: new Date() }
+                },
+                // Fallback: match by IP and website if computerId/fingerprint don't match
+                {
+                    ip: ip,
+                    website: website,
+                    expiresAt: { $gt: new Date() },
+                    lastActivity: { $gt: new Date(Date.now() - 30 * 60 * 1000) } // Active in last 30 minutes
+                }
+            ]
         });
-        
+
         if (session) {
             // Update existing session
             session.lastActivity = new Date();
-            session.visitCount += 1;
             session.expiresAt = new Date(Date.now() + 30 * 60 * 1000); // Extend session
             await session.save();
             return { session, isNewSession: false };
@@ -295,7 +308,7 @@ async function getOrCreateSession(ip, website, computerId, deviceFingerprint, re
                 userAgent: userAgent,
                 firstVisit: new Date(),
                 lastActivity: new Date(),
-                visitCount: 1,
+                visitCount: 0, // Start at 0, will be incremented when visit is actually tracked
                 expiresAt: new Date(Date.now() + 30 * 60 * 1000)
             });
             await session.save();
@@ -308,7 +321,7 @@ async function getOrCreateSession(ip, website, computerId, deviceFingerprint, re
         return {
             session: {
                 sessionId: sessionId,
-                visitCount: 1,
+                visitCount: 0,
                 firstVisit: new Date()
             },
             isNewSession: true
@@ -342,7 +355,7 @@ async function detectVpnProxy(ip) {
                 }
                 return null;
             },
-            
+
             // IPQualityScore VPN detection (free tier)
             async () => {
                 try {
@@ -363,7 +376,7 @@ async function detectVpnProxy(ip) {
                 }
                 return null;
             },
-            
+
             // Simple heuristic detection based on ISP
             async () => {
                 try {
@@ -373,19 +386,19 @@ async function detectVpnProxy(ip) {
                     if (response.data && response.data.status === 'success') {
                         const isp = response.data.isp.toLowerCase();
                         const org = response.data.org.toLowerCase();
-                        
+
                         // Common VPN/Proxy providers
                         const vpnKeywords = [
-                            'vpn', 'proxy', 'tor', 'nord', 'express', 'surfshark', 
+                            'vpn', 'proxy', 'tor', 'nord', 'express', 'surfshark',
                             'cyberghost', 'private internet access', 'pia', 'mullvad',
                             'windscribe', 'proton', 'tunnelbear', 'hide.me', 'purevpn',
                             'ipvanish', 'hotspot shield', 'zenmate', 'hoxx', 'browsec'
                         ];
-                        
-                        const isVpn = vpnKeywords.some(keyword => 
+
+                        const isVpn = vpnKeywords.some(keyword =>
                             isp.includes(keyword) || org.includes(keyword)
                         );
-                        
+
                         return {
                             isVpn,
                             isProxy: isVpn,
@@ -458,7 +471,7 @@ async function getLocationData(ip) {
                 }
                 throw new Error('ip-api.com failed');
             },
-            
+
             // Secondary service: ipapi.co (free tier, good accuracy)
             async () => {
                 const response = await axios.get(`https://ipapi.co/${ip}/json/`, {
@@ -483,7 +496,7 @@ async function getLocationData(ip) {
                 }
                 throw new Error('ipapi.co failed');
             },
-            
+
             // Fallback service: ipinfo.io (free tier)
             async () => {
                 const response = await axios.get(`https://ipinfo.io/${ip}/json`, {
@@ -547,24 +560,24 @@ async function getLocationData(ip) {
 // API ROUTES
 // ============================================================================
 
-// Track visitor endpoint
+// Updated track visitor endpoint
 app.post('/api/track', async (req, res) => {
     try {
         // Validate request body
         if (!req.body || typeof req.body !== 'object') {
             console.error('Invalid request body:', req.body);
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Invalid request body - JSON data required' 
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid request body - JSON data required'
             });
         }
 
         const ip = getRealIP(req);
-        
+
         // Extract data with fallbacks
-        const { 
-            website, 
-            userAgent, 
+        const {
+            website,
+            userAgent,
             referer,
             computerId,
             deviceFingerprint,
@@ -576,49 +589,103 @@ app.post('/api/track', async (req, res) => {
             hardwareConcurrency,
             maxTouchPoints,
             cookieEnabled,
-            doNotTrack
+            doNotTrack,
+            visitType,
+            isFirstVisitInSession
         } = req.body;
 
         // Validate required fields
         if (!website) {
             console.error('Missing website in request body:', req.body);
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Website is required' 
+            return res.status(400).json({
+                success: false,
+                message: 'Website is required'
             });
         }
 
-        // Determine visit type
-        const visitType = getVisitType(referer, website);
-        
-        // Get or create session
+        // Get or create session (but don't increment visit count yet)
         const { session, isNewSession } = await getOrCreateSession(
             ip, website, computerId, deviceFingerprint, referer, userAgent
         );
 
-        // Only track visits that meet our criteria:
-        // 1. New sessions (first visit)
-        // 2. External visits (from search engines, social media, other websites)
-        // 3. Direct visits (no referer)
-        // Skip: Internal navigation and page refreshes within same session
-        
-        const shouldTrack = isNewSession || 
-                           visitType === 'external' || 
-                           visitType === 'direct' ||
-                           isExternalTraffic(referer);
+        // Determine final visit type
+        const finalVisitType = visitType || getVisitType(referer, website);
+
+        // Enhanced tracking logic - be more strict about what we track
+        let shouldTrack = false;
+        let skipReason = '';
+
+        // RULE 1: Check if this session already has a tracked visit for this website
+        const existingVisitInSession = await Visit.findOne({
+            sessionId: session.sessionId,
+            website: website,
+            timestamp: { $gte: new Date(session.firstVisit) }
+        });
+
+        if (existingVisitInSession) {
+            shouldTrack = false;
+            skipReason = 'Session already has tracked visit for this website';
+        }
+        // RULE 2: Track new sessions (first time visitor)
+        else if (isNewSession) {
+            shouldTrack = true;
+            skipReason = 'New session - first visit';
+        }
+        // RULE 3: Track external visits from search engines, social media, etc.
+        else if (finalVisitType === 'external' && isExternalTraffic(referer)) {
+            shouldTrack = true;
+            skipReason = 'External traffic from search engine or social media';
+        }
+        // RULE 4: Track direct visits (typed URL, bookmark)
+        else if (finalVisitType === 'direct') {
+            shouldTrack = true;
+            skipReason = 'Direct visit';
+        }
+        // RULE 5: Never track internal navigation
+        else if (finalVisitType === 'internal') {
+            shouldTrack = false;
+            skipReason = 'Internal navigation within same domain';
+        }
+        // RULE 6: For other cases, check time-based rules
+        else {
+            const lastVisitTime = session.lastActivity || session.firstVisit;
+            const timeSinceLastActivity = Date.now() - lastVisitTime.getTime();
+            const minInterval = 5 * 60 * 1000; // 5 minutes
+
+            if (timeSinceLastActivity >= minInterval) {
+                shouldTrack = true;
+                skipReason = 'Sufficient time passed since last activity';
+            } else {
+                shouldTrack = false;
+                skipReason = 'Too soon since last activity';
+            }
+        }
+
+        // Log decision
+        console.log(`Tracking decision for IP: ${ip}, Website: ${website}`, {
+            sessionId: session.sessionId,
+            isNewSession: isNewSession,
+            visitType: finalVisitType,
+            shouldTrack: shouldTrack,
+            reason: skipReason,
+            referer: referer,
+            existingVisit: !!existingVisitInSession
+        });
 
         if (!shouldTrack) {
-            console.log(`Skipping internal navigation/refresh - IP: ${ip}, Website: ${website}, Session: ${session.sessionId}, Visit Type: ${visitType}`);
-            return res.status(200).json({ 
-                success: true, 
-                message: 'Internal navigation - not tracked',
+            return res.status(200).json({
+                success: true,
+                message: skipReason,
                 sessionId: session.sessionId,
-                visitType: visitType,
-                tracked: false
+                visitType: finalVisitType,
+                tracked: false,
+                isFirstVisit: false
             });
         }
 
-        // Get location data and VPN detection
+        // Only proceed with tracking if shouldTrack is true
+
+        // Get location data and VPN detection in parallel
         const [locationData, vpnData] = await Promise.all([
             getLocationData(ip),
             detectVpnProxy(ip)
@@ -642,13 +709,18 @@ app.post('/api/track', async (req, res) => {
             cookieEnabled,
             doNotTrack: doNotTrack === true || doNotTrack === '1' || doNotTrack === 'true',
             sessionId: session.sessionId,
-            visitType: visitType,
+            visitType: finalVisitType,
             isFirstVisit: isNewSession,
             ...locationData,
             ...vpnData
         });
 
         await visit.save();
+
+        // NOW increment the session visit count (only after successful tracking)
+        session.visitCount += 1;
+        session.lastActivity = new Date();
+        await session.save();
 
         // Emit real-time data to dashboard
         io.emit('newVisit', {
@@ -666,37 +738,38 @@ app.post('/api/track', async (req, res) => {
             vpnProvider: vpnData.vpnProvider,
             computerId,
             sessionId: session.sessionId,
-            visitType: visitType,
+            visitType: finalVisitType,
             isFirstVisit: isNewSession,
             timestamp: new Date(),
             referer: referer
         });
 
-        console.log(`New visit tracked - IP: ${ip}, Website: ${website}, Type: ${visitType}, Session: ${session.sessionId}, VPN: ${vpnData.isVpn}, Computer ID: ${computerId}`);
-        res.status(200).json({ 
-            success: true, 
-            message: 'Visit tracked',
+        console.log(`✅ Visit tracked successfully - IP: ${ip}, Website: ${website}, Type: ${finalVisitType}, Session: ${session.sessionId}, VPN: ${vpnData.isVpn}, Reason: ${skipReason}`);
+
+        res.status(200).json({
+            success: true,
+            message: 'Visit tracked successfully',
             sessionId: session.sessionId,
-            visitType: visitType,
+            visitType: finalVisitType,
             isFirstVisit: isNewSession,
-            tracked: true
+            tracked: true,
+            reason: skipReason
         });
     } catch (error) {
         console.error('Error tracking visit:', error);
-        
+
         // Log detailed error information
         if (error.name === 'ValidationError') {
             console.error('Validation errors:', error.errors);
         }
-        
-        res.status(500).json({ 
-            success: false, 
+
+        res.status(500).json({
+            success: false,
             message: 'Error tracking visit',
             error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
         });
     }
 });
-
 // Get dashboard data
 app.get('/api/dashboard', async (req, res) => {
     try {
@@ -805,20 +878,20 @@ app.get('/api/website/:domain', async (req, res) => {
 app.get('/api/track-ip', async (req, res) => {
     try {
         const { ip } = req.query;
-        
+
         if (!ip) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'IP address is required' 
+            return res.status(400).json({
+                success: false,
+                message: 'IP address is required'
             });
         }
 
         // Validate IP format (basic validation)
         const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
         if (!ipRegex.test(ip)) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Invalid IP address format' 
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid IP address format'
             });
         }
 
@@ -827,9 +900,9 @@ app.get('/api/track-ip', async (req, res) => {
 
         // Check if we have valid coordinates
         if (locationData.lat === 0 && locationData.lon === 0) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Could not locate this IP address' 
+            return res.status(404).json({
+                success: false,
+                message: 'Could not locate this IP address'
             });
         }
 
@@ -852,9 +925,9 @@ app.get('/api/track-ip', async (req, res) => {
 
     } catch (error) {
         console.error('Error tracking IP:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Error tracking IP location' 
+        res.status(500).json({
+            success: false,
+            message: 'Error tracking IP location'
         });
     }
 });
@@ -902,9 +975,9 @@ app.get('/api/ip-stats-map', async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching IP stats for map:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Error fetching IP statistics' 
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching IP statistics'
         });
     }
 });
@@ -989,9 +1062,9 @@ app.get('/api/ip-analytics', async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching IP analytics:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Error fetching IP analytics' 
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching IP analytics'
         });
     }
 });
@@ -1000,16 +1073,16 @@ app.get('/api/ip-analytics', async (req, res) => {
 app.get('/api/session/:sessionId', async (req, res) => {
     try {
         const { sessionId } = req.params;
-        
+
         const session = await Session.findOne({ sessionId: sessionId });
-        
+
         if (!session) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Session not found' 
+            return res.status(404).json({
+                success: false,
+                message: 'Session not found'
             });
         }
-        
+
         res.json({
             success: true,
             session: {
@@ -1027,9 +1100,9 @@ app.get('/api/session/:sessionId', async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching session:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Error fetching session data' 
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching session data'
         });
     }
 });
@@ -1102,9 +1175,9 @@ app.get('/api/visit-stats', async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching visit stats:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Error fetching visit statistics' 
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching visit statistics'
         });
     }
 });
@@ -1176,9 +1249,9 @@ app.get('/api/vpn-stats', async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching VPN stats:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Error fetching VPN statistics' 
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching VPN statistics'
         });
     }
 });
