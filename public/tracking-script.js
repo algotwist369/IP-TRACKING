@@ -142,7 +142,7 @@
 
     // Collect all tracking data
     function collectTrackingData() {
-        const session = updateSession();
+        const session = getSession(); // Get session WITHOUT updating visitCount
         
         return {
             website: window.location.hostname,
@@ -162,7 +162,7 @@
             cookieEnabled: navigator.cookieEnabled,
             doNotTrack: navigator.doNotTrack === '1',
             sessionId: session.sessionId,
-            isNewSession: isNewSession(),
+            isNewSession: session.visitCount === 0, // Check if this is first visit
             timestamp: new Date().toISOString()
         };
     }
@@ -170,6 +170,9 @@
     // Send tracking data to server
     function trackVisit() {
         const trackingData = collectTrackingData();
+        
+        // Update session visit count AFTER collecting data
+        updateSession();
         
         // Log tracking attempt (for debugging)
         console.log('Tracking visit:', {
@@ -209,21 +212,21 @@
 
     // Check if we should track this visit
     function shouldTrack() {
-        const session = getSession();
+        const session = getSession(); // Get session WITHOUT updating visitCount
         const referer = getReferrer();
         const currentDomain = window.location.hostname;
         
-        // Always track if it's a new session
+        // Always track if it's a new session (first visit)
         if (session.visitCount === 0) {
             return true;
         }
         
-        // Track if referrer is from external domain
+        // Track if referrer is from external domain (Google, social media, etc.)
         if (referer) {
             try {
                 const refererUrl = new URL(referer);
                 if (refererUrl.hostname !== currentDomain) {
-                    return true; // External referrer
+                    return true; // External referrer - always track
                 }
             } catch (error) {
                 // Invalid referrer URL, treat as external
@@ -231,19 +234,34 @@
             }
         }
         
-        // Track if no referrer (direct visit)
+        // Track if no referrer (direct visit - typed URL, bookmark)
         if (!referer) {
             return true;
         }
         
         // Don't track internal navigation or page refreshes
+        // (same domain referrer with existing session)
         return false;
     }
 
     // Initialize tracking
     function initTracking() {
+        const session = getSession();
+        const referer = getReferrer();
+        const currentDomain = window.location.hostname;
+        
+        console.log('🔍 Tracking Debug Info:', {
+            sessionId: session.sessionId,
+            visitCount: session.visitCount,
+            referer: referer,
+            currentDomain: currentDomain,
+            isNewSession: session.visitCount === 0,
+            refererDomain: referer ? new URL(referer).hostname : 'none'
+        });
+        
         // Only track if conditions are met
         if (shouldTrack()) {
+            console.log('✅ Tracking this visit');
             trackVisit();
         } else {
             console.log('Skipping tracking - internal navigation or page refresh');

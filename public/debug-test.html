@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 IP Tracking Debug Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .section {
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .button {
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 8px;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+        .button.success {
+            background: #28a745;
+        }
+        .button.warning {
+            background: #ffc107;
+            color: #000;
+        }
+        .button.danger {
+            background: #dc3545;
+        }
+        .info {
+            background: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .code {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+        .tracking-info {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .console-output {
+            background: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .test-pass {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .test-fail {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .test-pending {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 IP Tracking Debug Test Suite</h1>
+        <p>Comprehensive testing and debugging for the enhanced IP tracking system</p>
+    </div>
+
+    <div class="section">
+        <h2>📊 Current Session Information</h2>
+        <div class="tracking-info" id="sessionInfo">
+            <div class="test-pending">Loading session information...</div>
+        </div>
+        
+        <button class="button" onclick="refreshSessionInfo()">🔄 Refresh Session Info</button>
+        <button class="button warning" onclick="clearAllData()">🗑️ Clear All Data (New User)</button>
+        <button class="button danger" onclick="forceNewSession()">🆕 Force New Session</button>
+    </div>
+
+    <div class="section">
+        <h2>🧪 Test Scenarios</h2>
+        
+        <div class="info">
+            <h3>Test Instructions:</h3>
+            <ol>
+                <li>Click "Run All Tests" to start comprehensive testing</li>
+                <li>Check console output for detailed debugging information</li>
+                <li>Verify each test scenario works as expected</li>
+                <li>Use individual test buttons for specific scenarios</li>
+            </ol>
+        </div>
+
+        <button class="button success" onclick="runAllTests()">🚀 Run All Tests</button>
+        <button class="button" onclick="testFirstVisit()">1️⃣ Test First Visit</button>
+        <button class="button" onclick="testPageRefresh()">🔄 Test Page Refresh</button>
+        <button class="button" onclick="testInternalNavigation()">🔗 Test Internal Navigation</button>
+        <button class="button" onclick="testExternalVisit()">🌐 Test External Visit</button>
+        <button class="button" onclick="testSessionExpiry()">⏰ Test Session Expiry</button>
+        
+        <div id="testResults"></div>
+    </div>
+
+    <div class="section">
+        <h2>📈 Tracking Statistics</h2>
+        <div class="stats-grid" id="trackingStats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalVisits">0</div>
+                <div class="stat-label">Total Visits</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="uniqueSessions">0</div>
+                <div class="stat-label">Unique Sessions</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="externalVisits">0</div>
+                <div class="stat-label">External Visits</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="directVisits">0</div>
+                <div class="stat-label">Direct Visits</div>
+            </div>
+        </div>
+        
+        <button class="button" onclick="updateStats()">📊 Update Statistics</button>
+    </div>
+
+    <div class="section">
+        <h2>🖥️ Console Output</h2>
+        <div class="console-output" id="consoleOutput">
+            <div>Console output will appear here...</div>
+        </div>
+        <button class="button" onclick="clearConsole()">🧹 Clear Console</button>
+    </div>
+
+    <div class="section">
+        <h2>🔧 Manual Testing Tools</h2>
+        
+        <div class="warning">
+            <h3>⚠️ Advanced Testing:</h3>
+            <p>Use these tools to simulate different scenarios and test edge cases.</p>
+        </div>
+
+        <button class="button" onclick="simulateGoogleVisit()">🔍 Simulate Google Visit</button>
+        <button class="button" onclick="simulateFacebookVisit()">📘 Simulate Facebook Visit</button>
+        <button class="button" onclick="simulateDirectVisit()">🎯 Simulate Direct Visit</button>
+        <button class="button" onclick="testDeviceFingerprint()">🔐 Test Device Fingerprint</button>
+        <button class="button" onclick="testSessionPersistence()">💾 Test Session Persistence</button>
+        
+        <div id="manualTestResults"></div>
+    </div>
+
+    <div class="section">
+        <h2>📋 Expected Behavior</h2>
+        
+        <div class="success">
+            <h3>✅ Should Track:</h3>
+            <ul>
+                <li><strong>First Visit:</strong> New session, visitCount = 0</li>
+                <li><strong>External Referrer:</strong> Google, Facebook, other domains</li>
+                <li><strong>Direct Visit:</strong> No referrer (typed URL, bookmark)</li>
+                <li><strong>Expired Session:</strong> After 30+ minutes of inactivity</li>
+            </ul>
+        </div>
+
+        <div class="error">
+            <h3>❌ Should NOT Track:</h3>
+            <ul>
+                <li><strong>Page Refresh:</strong> F5, Ctrl+R, browser refresh</li>
+                <li><strong>Internal Navigation:</strong> Links within same domain</li>
+                <li><strong>Same Session:</strong> Multiple pages within 30 minutes</li>
+                <li><strong>Hash Changes:</strong> #section1, #section2, etc.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Include the tracking script -->
+    <script src="tracking-script.js"></script>
+    
+    <script>
+        // Test variables
+        let testResults = [];
+        let consoleMessages = [];
+
+        // Override console.log to capture messages
+        const originalConsoleLog = console.log;
+        const originalConsoleWarn = console.warn;
+        const originalConsoleError = console.error;
+
+        function captureConsoleMessage(type, message) {
+            const timestamp = new Date().toLocaleTimeString();
+            consoleMessages.push(`[${timestamp}] ${type.toUpperCase()}: ${message}`);
+            updateConsoleOutput();
+        }
+
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, args);
+            captureConsoleMessage('log', args.join(' '));
+        };
+
+        console.warn = function(...args) {
+            originalConsoleWarn.apply(console, args);
+            captureConsoleMessage('warn', args.join(' '));
+        };
+
+        console.error = function(...args) {
+            originalConsoleError.apply(console, args);
+            captureConsoleMessage('error', args.join(' '));
+        };
+
+        // Update console output
+        function updateConsoleOutput() {
+            const consoleOutput = document.getElementById('consoleOutput');
+            consoleOutput.innerHTML = consoleMessages.slice(-50).join('<br>');
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+
+        // Clear console
+        function clearConsole() {
+            consoleMessages = [];
+            updateConsoleOutput();
+        }
+
+        // Refresh session information
+        function refreshSessionInfo() {
+            const sessionInfo = document.getElementById('sessionInfo');
+            
+            if (window.IPTracker) {
+                const session = window.IPTracker.getSession();
+                const data = window.IPTracker.collectData();
+                const shouldTrack = window.IPTracker.shouldTrack();
+                
+                sessionInfo.innerHTML = `
+                    <div class="info">
+                        <h4>📋 Session Details:</h4>
+                        <strong>Session ID:</strong> ${session.sessionId}<br>
+                        <strong>Visit Count:</strong> ${session.visitCount}<br>
+                        <strong>Created:</strong> ${new Date(session.createdAt).toLocaleString()}<br>
+                        <strong>Last Activity:</strong> ${session.lastActivity ? new Date(session.lastActivity).toLocaleString() : 'Never'}<br>
+                        <strong>Computer ID:</strong> ${data.computerId}<br>
+                        <strong>Device Fingerprint:</strong> ${data.deviceFingerprint}<br>
+                    </div>
+                    <div class="info">
+                        <h4>🌐 Current Page Info:</h4>
+                        <strong>Referrer:</strong> ${data.referer || 'None (Direct visit)'}<br>
+                        <strong>Current Domain:</strong> ${data.website}<br>
+                        <strong>Page URL:</strong> ${data.url}<br>
+                        <strong>Page Title:</strong> ${data.title}<br>
+                    </div>
+                    <div class="${shouldTrack ? 'success' : 'warning'}">
+                        <h4>🎯 Tracking Decision:</h4>
+                        <strong>Should Track:</strong> ${shouldTrack ? 'YES ✅' : 'NO ❌'}<br>
+                        <strong>Reason:</strong> ${getTrackingReason()}
+                    </div>
+                `;
+            } else {
+                sessionInfo.innerHTML = '<div class="error">❌ Tracking script not loaded!</div>';
+            }
+        }
+
+        // Get tracking reason
+        function getTrackingReason() {
+            if (!window.IPTracker) return 'Script not loaded';
+            
+            const session = window.IPTracker.getSession();
+            const referer = document.referrer;
+            const currentDomain = window.location.hostname;
+            
+            if (session.visitCount === 0) {
+                return 'New session (first visit)';
+            }
+            
+            if (referer) {
+                try {
+                    const refererUrl = new URL(referer);
+                    if (refererUrl.hostname !== currentDomain) {
+                        return 'External referrer';
+                    } else {
+                        return 'Internal navigation (same domain)';
+                    }
+                } catch (error) {
+                    return 'Invalid referrer URL';
+                }
+            }
+            
+            if (!referer) {
+                return 'Direct visit (no referrer)';
+            }
+            
+            return 'Unknown reason';
+        }
+
+        // Clear all data
+        function clearAllData() {
+            localStorage.removeItem('ip_tracking_session');
+            localStorage.removeItem('ip_tracking_computer_id');
+            
+            const results = document.getElementById('testResults');
+            results.innerHTML = '<div class="success">✅ All data cleared! Next visit will be treated as new user.</div>';
+            
+            setTimeout(() => {
+                refreshSessionInfo();
+                updateStats();
+            }, 100);
+        }
+
+        // Force new session
+        function forceNewSession() {
+            const session = window.IPTracker.getSession();
+            session.createdAt = Date.now() - (31 * 60 * 1000); // 31 minutes ago
+            localStorage.setItem('ip_tracking_session', JSON.stringify(session));
+            
+            const results = document.getElementById('testResults');
+            results.innerHTML = '<div class="success">✅ Session expired! Next visit will create new session.</div>';
+            
+            setTimeout(() => {
+                refreshSessionInfo();
+            }, 100);
+        }
+
+        // Run all tests
+        function runAllTests() {
+            const results = document.getElementById('testResults');
+            results.innerHTML = '<div class="test-pending">🧪 Running comprehensive tests...</div>';
+            
+            testResults = [];
+            
+            // Test 1: First visit
+            setTimeout(() => testFirstVisit(), 500);
+            
+            // Test 2: Page refresh
+            setTimeout(() => testPageRefresh(), 1000);
+            
+            // Test 3: Internal navigation
+            setTimeout(() => testInternalNavigation(), 1500);
+            
+            // Test 4: External visit
+            setTimeout(() => testExternalVisit(), 2000);
+            
+            // Test 5: Session expiry
+            setTimeout(() => testSessionExpiry(), 2500);
+            
+            // Show final results
+            setTimeout(() => showTestResults(), 3000);
+        }
+
+        // Individual test functions
+        function testFirstVisit() {
+            const session = window.IPTracker.getSession();
+            const shouldTrack = window.IPTracker.shouldTrack();
+            const expected = session.visitCount === 0;
+            
+            const result = {
+                name: 'First Visit Test',
+                expected: expected,
+                actual: shouldTrack,
+                passed: shouldTrack === expected,
+                details: `Visit count: ${session.visitCount}, Should track: ${shouldTrack}`
+            };
+            
+            testResults.push(result);
+            addTestResult(result);
+        }
+
+        function testPageRefresh() {
+            const session = window.IPTracker.getSession();
+            const shouldTrack = window.IPTracker.shouldTrack();
+            const expected = false; // Should not track page refresh
+            
+            const result = {
+                name: 'Page Refresh Test',
+                expected: expected,
+                actual: shouldTrack,
+                passed: shouldTrack === expected,
+                details: `Visit count: ${session.visitCount}, Should track: ${shouldTrack}`
+            };
+            
+            testResults.push(result);
+            addTestResult(result);
+        }
+
+        function testInternalNavigation() {
+            const session = window.IPTracker.getSession();
+            const shouldTrack = window.IPTracker.shouldTrack();
+            const expected = false; // Should not track internal navigation
+            
+            const result = {
+                name: 'Internal Navigation Test',
+                expected: expected,
+                actual: shouldTrack,
+                passed: shouldTrack === expected,
+                details: `Visit count: ${session.visitCount}, Should track: ${shouldTrack}`
+            };
+            
+            testResults.push(result);
+            addTestResult(result);
+        }
+
+        function testExternalVisit() {
+            // Simulate external referrer
+            Object.defineProperty(document, 'referrer', {
+                value: 'https://www.google.com/search?q=test',
+                writable: false
+            });
+            
+            const session = window.IPTracker.getSession();
+            const shouldTrack = window.IPTracker.shouldTrack();
+            const expected = true; // Should track external visit
+            
+            const result = {
+                name: 'External Visit Test',
+                expected: expected,
+                actual: shouldTrack,
+                passed: shouldTrack === expected,
+                details: `Referrer: ${document.referrer}, Should track: ${shouldTrack}`
+            };
+            
+            testResults.push(result);
+            addTestResult(result);
+        }
+
+        function testSessionExpiry() {
+            // Simulate expired session
+            const session = window.IPTracker.getSession();
+            session.createdAt = Date.now() - (31 * 60 * 1000); // 31 minutes ago
+            localStorage.setItem('ip_tracking_session', JSON.stringify(session));
+            
+            const shouldTrack = window.IPTracker.shouldTrack();
+            const expected = true; // Should track expired session
+            
+            const result = {
+                name: 'Session Expiry Test',
+                expected: expected,
+                actual: shouldTrack,
+                passed: shouldTrack === expected,
+                details: `Session expired, Should track: ${shouldTrack}`
+            };
+            
+            testResults.push(result);
+            addTestResult(result);
+        }
+
+        // Add test result
+        function addTestResult(result) {
+            const results = document.getElementById('testResults');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${result.passed ? 'test-pass' : 'test-fail'}`;
+            resultDiv.innerHTML = `
+                <strong>${result.name}:</strong> ${result.passed ? 'PASS ✅' : 'FAIL ❌'}<br>
+                <small>${result.details}</small>
+            `;
+            results.appendChild(resultDiv);
+        }
+
+        // Show final test results
+        function showTestResults() {
+            const results = document.getElementById('testResults');
+            const passed = testResults.filter(r => r.passed).length;
+            const total = testResults.length;
+            
+            const summary = document.createElement('div');
+            summary.className = `test-result ${passed === total ? 'test-pass' : 'test-fail'}`;
+            summary.innerHTML = `
+                <strong>📊 Test Summary:</strong> ${passed}/${total} tests passed
+                ${passed === total ? '🎉 All tests passed!' : '⚠️ Some tests failed!'}
+            `;
+            results.appendChild(summary);
+        }
+
+        // Manual testing functions
+        function simulateGoogleVisit() {
+            Object.defineProperty(document, 'referrer', {
+                value: 'https://www.google.com/search?q=test',
+                writable: false
+            });
+            
+            const results = document.getElementById('manualTestResults');
+            results.innerHTML = '<div class="success">✅ Simulated Google visit. Refresh page to test external visit tracking.</div>';
+            
+            setTimeout(() => {
+                refreshSessionInfo();
+            }, 100);
+        }
+
+        function simulateFacebookVisit() {
+            Object.defineProperty(document, 'referrer', {
+                value: 'https://www.facebook.com/',
+                writable: false
+            });
+            
+            const results = document.getElementById('manualTestResults');
+            results.innerHTML = '<div class="success">✅ Simulated Facebook visit. Refresh page to test external visit tracking.</div>';
+            
+            setTimeout(() => {
+                refreshSessionInfo();
+            }, 100);
+        }
+
+        function simulateDirectVisit() {
+            Object.defineProperty(document, 'referrer', {
+                value: '',
+                writable: false
+            });
+            
+            const results = document.getElementById('manualTestResults');
+            results.innerHTML = '<div class="success">✅ Simulated direct visit. Refresh page to test direct visit tracking.</div>';
+            
+            setTimeout(() => {
+                refreshSessionInfo();
+            }, 100);
+        }
+
+        function testDeviceFingerprint() {
+            if (window.IPTracker) {
+                const data = window.IPTracker.collectData();
+                const results = document.getElementById('manualTestResults');
+                results.innerHTML = `
+                    <div class="info">
+                        <h4>🔐 Device Fingerprint Test:</h4>
+                        <strong>Device Fingerprint:</strong> ${data.deviceFingerprint}<br>
+                        <strong>Computer ID:</strong> ${data.computerId}<br>
+                        <strong>Screen Resolution:</strong> ${data.screenResolution}<br>
+                        <strong>Platform:</strong> ${data.platform}<br>
+                        <strong>Language:</strong> ${data.language}<br>
+                        <strong>Timezone:</strong> ${data.timezone}
+                    </div>
+                `;
+            }
+        }
+
+        function testSessionPersistence() {
+            const session = window.IPTracker.getSession();
+            const results = document.getElementById('manualTestResults');
+            
+            results.innerHTML = `
+                <div class="info">
+                    <h4>💾 Session Persistence Test:</h4>
+                    <strong>Session ID:</strong> ${session.sessionId}<br>
+                    <strong>Visit Count:</strong> ${session.visitCount}<br>
+                    <strong>Created:</strong> ${new Date(session.createdAt).toLocaleString()}<br>
+                    <strong>Last Activity:</strong> ${session.lastActivity ? new Date(session.lastActivity).toLocaleString() : 'Never'}<br>
+                    <strong>Session Age:</strong> ${Math.round((Date.now() - session.createdAt) / 1000 / 60)} minutes
+                </div>
+            `;
+        }
+
+        // Update statistics
+        function updateStats() {
+            // This would typically fetch from your server
+            // For now, we'll show local session data
+            const session = window.IPTracker.getSession();
+            
+            document.getElementById('totalVisits').textContent = session.visitCount;
+            document.getElementById('uniqueSessions').textContent = '1'; // Current session
+            document.getElementById('externalVisits').textContent = document.referrer ? '1' : '0';
+            document.getElementById('directVisits').textContent = document.referrer ? '0' : '1';
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                refreshSessionInfo();
+                updateStats();
+                console.log('🔍 Debug test page loaded successfully!');
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
