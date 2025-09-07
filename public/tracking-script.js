@@ -184,7 +184,19 @@
                     serviceWorkers: !!navigator.serviceWorker,
                     
                     // Audio fingerprinting
-                    audio: this.getAudioFingerprint()
+                    audio: this.getAudioFingerprint(),
+                    
+                    // Device type detection
+                    deviceType: this.getDeviceType(),
+                    
+                    // Memory information
+                    memory: navigator.deviceMemory || 'unknown',
+                    
+                    // Battery information (if available)
+                    battery: this.getBatteryInfo(),
+                    
+                    // Media devices
+                    mediaDevices: this.getMediaDevicesInfo()
                 };
             } catch (error) {
                 console.warn('IP Tracker: Error collecting device info:', error);
@@ -282,6 +294,41 @@
                 audioContext.close();
                 
                 return utils.hashString(audioData.join(','));
+            } catch (error) {
+                return 'not_supported';
+            }
+        },
+
+        // Get battery information
+        getBatteryInfo: () => {
+            try {
+                if ('getBattery' in navigator) {
+                    return navigator.getBattery().then(battery => ({
+                        charging: battery.charging,
+                        chargingTime: battery.chargingTime,
+                        dischargingTime: battery.dischargingTime,
+                        level: battery.level
+                    })).catch(() => 'not_supported');
+                }
+                return 'not_supported';
+            } catch (error) {
+                return 'not_supported';
+            }
+        },
+
+        // Get media devices information
+        getMediaDevicesInfo: () => {
+            try {
+                if ('mediaDevices' in navigator && 'enumerateDevices' in navigator.mediaDevices) {
+                    return navigator.mediaDevices.enumerateDevices().then(devices => {
+                        return devices.map(device => ({
+                            kind: device.kind,
+                            label: device.label || 'unknown',
+                            deviceId: device.deviceId ? 'present' : 'absent'
+                        }));
+                    }).catch(() => 'not_supported');
+                }
+                return 'not_supported';
             } catch (error) {
                 return 'not_supported';
             }
@@ -412,22 +459,13 @@
                     userAgentHash: utils.hashString(navigator.userAgent),
                     
                     // Browser information
-                    browser: {
-                        name: this.getBrowserInfo().name,
-                        version: this.getBrowserInfo().version,
-                        engine: this.getBrowserInfo().engine,
-                        engineVersion: this.getBrowserInfo().engineVersion
+                    browser: dataCollector.getBrowserInfo(),
+                    os: dataCollector.getOSInfo(),
+                    device: {
+                        type: dataCollector.getDeviceType(),
+                        model: 'unknown',
+                        vendor: 'unknown'
                     },
-                    os: {
-                        name: this.getOSInfo().name,
-                        version: this.getOSInfo().version,
-                        platform: navigator.platform
-                    },
-                    // device: {
-                    //     type: this.getDeviceType(),
-                    //     model: 'unknown',
-                    //     vendor: 'unknown'
-                    // },
                     
                     // Screen and display
                     screenResolution: deviceInfo.screenResolution,
@@ -487,28 +525,42 @@
             let engine = 'Unknown';
             let engineVersion = 'Unknown';
             
-            // Detect browser
-            if (userAgent.includes('Chrome')) {
-                name = 'Chrome';
-                version = userAgent.match(/Chrome\/(\d+)/)?.[1] || 'Unknown';
-            } else if (userAgent.includes('Firefox')) {
-                name = 'Firefox';
-                version = userAgent.match(/Firefox\/(\d+)/)?.[1] || 'Unknown';
-            } else if (userAgent.includes('Safari')) {
-                name = 'Safari';
-                version = userAgent.match(/Version\/(\d+)/)?.[1] || 'Unknown';
-            } else if (userAgent.includes('Edge')) {
+            // Detect browser with more comprehensive patterns
+            if (userAgent.includes('Edg/')) {
                 name = 'Edge';
-                version = userAgent.match(/Edge\/(\d+)/)?.[1] || 'Unknown';
+                version = userAgent.match(/Edg\/(\d+\.\d+)/)?.[1] || 'Unknown';
+                engine = 'Blink';
+            } else if (userAgent.includes('Chrome/') && !userAgent.includes('Edg/')) {
+                name = 'Chrome';
+                version = userAgent.match(/Chrome\/(\d+\.\d+)/)?.[1] || 'Unknown';
+                engine = 'Blink';
+            } else if (userAgent.includes('Firefox/')) {
+                name = 'Firefox';
+                version = userAgent.match(/Firefox\/(\d+\.\d+)/)?.[1] || 'Unknown';
+                engine = 'Gecko';
+            } else if (userAgent.includes('Safari/') && !userAgent.includes('Chrome/')) {
+                name = 'Safari';
+                version = userAgent.match(/Version\/(\d+\.\d+)/)?.[1] || 'Unknown';
+                engine = 'WebKit';
+            } else if (userAgent.includes('Opera/') || userAgent.includes('OPR/')) {
+                name = 'Opera';
+                version = userAgent.match(/(?:Opera|OPR)\/(\d+\.\d+)/)?.[1] || 'Unknown';
+                engine = 'Blink';
+            } else if (userAgent.includes('MSIE') || userAgent.includes('Trident/')) {
+                name = 'Internet Explorer';
+                version = userAgent.match(/(?:MSIE |rv:)(\d+\.\d+)/)?.[1] || 'Unknown';
+                engine = 'Trident';
             }
             
-            // Detect engine
-            if (userAgent.includes('Gecko')) {
-                engine = 'Gecko';
-            } else if (userAgent.includes('WebKit')) {
-                engine = 'WebKit';
-            } else if (userAgent.includes('Trident')) {
-                engine = 'Trident';
+            // Detect engine version
+            if (engine === 'Blink') {
+                engineVersion = userAgent.match(/Chrome\/(\d+\.\d+)/)?.[1] || 'Unknown';
+            } else if (engine === 'Gecko') {
+                engineVersion = userAgent.match(/rv:(\d+\.\d+)/)?.[1] || 'Unknown';
+            } else if (engine === 'WebKit') {
+                engineVersion = userAgent.match(/WebKit\/(\d+\.\d+)/)?.[1] || 'Unknown';
+            } else if (engine === 'Trident') {
+                engineVersion = userAgent.match(/Trident\/(\d+\.\d+)/)?.[1] || 'Unknown';
             }
             
             return { name, version, engine, engineVersion };
@@ -520,23 +572,64 @@
             let name = 'Unknown';
             let version = 'Unknown';
             
+            // Windows detection
             if (userAgent.includes('Windows')) {
                 name = 'Windows';
                 if (userAgent.includes('Windows NT 10.0')) version = '10';
                 else if (userAgent.includes('Windows NT 6.3')) version = '8.1';
                 else if (userAgent.includes('Windows NT 6.2')) version = '8';
                 else if (userAgent.includes('Windows NT 6.1')) version = '7';
-            } else if (userAgent.includes('Mac OS X')) {
+                else if (userAgent.includes('Windows NT 6.0')) version = 'Vista';
+                else if (userAgent.includes('Windows NT 5.1')) version = 'XP';
+                else if (userAgent.includes('Windows NT 5.0')) version = '2000';
+                else version = userAgent.match(/Windows NT (\d+\.\d+)/)?.[1] || 'Unknown';
+            }
+            // macOS detection
+            else if (userAgent.includes('Mac OS X')) {
                 name = 'macOS';
-                version = userAgent.match(/Mac OS X (\d+_\d+)/)?.[1]?.replace('_', '.') || 'Unknown';
-            } else if (userAgent.includes('Linux')) {
+                const match = userAgent.match(/Mac OS X (\d+)[._](\d+)/);
+                if (match) {
+                    version = `${match[1]}.${match[2]}`;
+                } else {
+                    version = userAgent.match(/Mac OS X (\d+_\d+)/)?.[1]?.replace('_', '.') || 'Unknown';
+                }
+            }
+            // Linux detection
+            else if (userAgent.includes('Linux')) {
                 name = 'Linux';
-            } else if (userAgent.includes('Android')) {
+                if (userAgent.includes('Ubuntu')) version = 'Ubuntu';
+                else if (userAgent.includes('Debian')) version = 'Debian';
+                else if (userAgent.includes('CentOS')) version = 'CentOS';
+                else if (userAgent.includes('Red Hat')) version = 'Red Hat';
+                else if (userAgent.includes('Fedora')) version = 'Fedora';
+                else if (userAgent.includes('SUSE')) version = 'SUSE';
+                else if (userAgent.includes('Arch')) version = 'Arch';
+                else version = 'Linux';
+            }
+            // Android detection
+            else if (userAgent.includes('Android')) {
                 name = 'Android';
-                version = userAgent.match(/Android (\d+)/)?.[1] || 'Unknown';
-            } else if (userAgent.includes('iOS')) {
+                version = userAgent.match(/Android (\d+\.?\d*)/)?.[1] || 'Unknown';
+            }
+            // iOS detection
+            else if (userAgent.includes('iPhone') || userAgent.includes('iPad')) {
                 name = 'iOS';
-                version = userAgent.match(/OS (\d+_\d+)/)?.[1]?.replace('_', '.') || 'Unknown';
+                const match = userAgent.match(/OS (\d+)[._](\d+)/);
+                if (match) {
+                    version = `${match[1]}.${match[2]}`;
+                } else {
+                    version = userAgent.match(/OS (\d+_\d+)/)?.[1]?.replace('_', '.') || 'Unknown';
+                }
+            }
+            // Chrome OS detection
+            else if (userAgent.includes('CrOS')) {
+                name = 'Chrome OS';
+                version = userAgent.match(/CrOS (\d+\.\d+)/)?.[1] || 'Unknown';
+            }
+            // FreeBSD detection
+            else if (userAgent.includes('FreeBSD')) {
+                name = 'FreeBSD';
+                version = userAgent.match(/FreeBSD (\d+\.\d+)/)?.[1] || 'Unknown';
             }
             
             return { name, version };
@@ -545,9 +638,33 @@
         // Get device type
         getDeviceType: () => {
             const userAgent = navigator.userAgent;
-            if (userAgent.includes('Mobile')) return 'mobile';
-            if (userAgent.includes('Tablet')) return 'tablet';
-            return 'desktop';
+            const screenWidth = screen.width;
+            const screenHeight = screen.height;
+            
+            // Mobile detection
+            if (userAgent.includes('Mobile') || userAgent.includes('Android') || userAgent.includes('iPhone')) {
+                return 'mobile';
+            }
+            
+            // Tablet detection
+            if (userAgent.includes('Tablet') || userAgent.includes('iPad') || 
+                (screenWidth >= 768 && screenWidth <= 1024 && screenHeight >= 768 && screenHeight <= 1024)) {
+                return 'tablet';
+            }
+            
+            // Desktop detection
+            if (screenWidth > 1024) {
+                return 'desktop';
+            }
+            
+            // Fallback based on screen size
+            if (screenWidth < 768) {
+                return 'mobile';
+            } else if (screenWidth <= 1024) {
+                return 'tablet';
+            } else {
+                return 'desktop';
+            }
         },
         
         // Get UTM parameters

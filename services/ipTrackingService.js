@@ -117,7 +117,10 @@ class IPTrackingService {
             'x-client-ip',             // Apache
             'x-forwarded',             // General proxy
             'forwarded-for',           // RFC 7239
-            'forwarded'                // RFC 7239
+            'forwarded',               // RFC 7239
+            'x-cluster-client-ip',     // Cluster
+            'x-forwarded-host',        // Host header
+            'x-original-forwarded-for' // Original forwarded for
         ];
 
         for (const header of headers) {
@@ -125,17 +128,49 @@ class IPTrackingService {
             if (value) {
                 // Handle comma-separated IPs (take first one)
                 const ip = value.split(',')[0].trim();
-                if (this.isValidIP(ip)) {
+                if (this.isValidIP(ip) && !this.isPrivateIP(ip)) {
                     return ip;
                 }
             }
         }
 
-        // Fallback to connection info
-        return req.connection?.remoteAddress || 
-               req.socket?.remoteAddress || 
-               req.connection?.socket?.remoteAddress || 
-               '127.0.0.1';
+        // Get IP from connection info
+        let ip = req.connection?.remoteAddress || 
+                 req.socket?.remoteAddress || 
+                 req.connection?.socket?.remoteAddress ||
+                 req.ip;
+
+        // Handle IPv6 localhost mapping
+        if (ip === '::1' || ip === '::ffff:127.0.0.1') {
+            ip = '127.0.0.1';
+        }
+
+        // If still localhost, try to get external IP
+        if (this.isPrivateIP(ip)) {
+            // For development/testing, we'll use a fallback
+            // In production, this should be handled by proper proxy configuration
+            logger.warn(`Private IP detected: ${ip}. Consider configuring proper proxy headers.`);
+        }
+
+        return ip || '127.0.0.1';
+    }
+
+    isPrivateIP(ip) {
+        if (!ip) return true;
+        
+        // IPv4 private ranges
+        const privateRanges = [
+            /^10\./,                    // 10.0.0.0/8
+            /^172\.(1[6-9]|2[0-9]|3[0-1])\./, // 172.16.0.0/12
+            /^192\.168\./,              // 192.168.0.0/16
+            /^127\./,                   // 127.0.0.0/8 (localhost)
+            /^169\.254\./,              // 169.254.0.0/16 (link-local)
+            /^0\./,                     // 0.0.0.0/8
+            /^::1$/,                    // IPv6 localhost
+            /^::ffff:127\.0\.0\.1$/     // IPv6 mapped IPv4 localhost
+        ];
+
+        return privateRanges.some(range => range.test(ip));
     }
 
     isValidIP(ip) {
@@ -164,11 +199,41 @@ class IPTrackingService {
             return cached.data;
         }
 
+        // Handle localhost/private IPs
+        if (this.isPrivateIP(ip)) {
+            const localhostData = {
+                country: 'Local',
+                countryCode: 'LO',
+                region: 'Local Network',
+                regionCode: 'LN',
+                city: 'Localhost',
+                district: 'Local',
+                zip: '00000',
+                timezone: 'UTC',
+                isp: 'Local Network',
+                org: 'Local Network',
+                as: 'Local Network',
+                asn: '00000',
+                lat: 0,
+                lon: 0,
+                accuracy: 'local'
+            };
+            
+            // Cache the result
+            this.rateLimitCache.set(cacheKey, {
+                data: localhostData,
+                timestamp: Date.now()
+            });
+            
+            logger.info(`Localhost data returned for IP: ${ip}`);
+            return localhostData;
+        }
+
         // Try each service until one works
         for (let i = 0; i < this.geolocationServices.length; i++) {
             try {
                 const result = await this.geolocationServices[i](ip);
-                if (result && result.lat && result.lon) {
+                if (result && result.lat && result.lon && result.lat !== 0 && result.lon !== 0) {
                     // Cache the result
                     this.rateLimitCache.set(cacheKey, {
                         data: result,
@@ -187,7 +252,7 @@ class IPTrackingService {
         }
 
         // Return default data if all services fail
-        return {
+        const fallbackData = {
             country: 'Unknown',
             countryCode: 'XX',
             region: 'Unknown',
@@ -204,6 +269,14 @@ class IPTrackingService {
             lon: 0,
             accuracy: 'none'
         };
+
+        // Cache the fallback result
+        this.rateLimitCache.set(cacheKey, {
+            data: fallbackData,
+            timestamp: Date.now()
+        });
+
+        return fallbackData;
     }
 
     async ipApiCom(ip) {
@@ -432,28 +505,48 @@ class IPTrackingService {
         try {
             const apiKey = process.env.IPHUB_API_KEY;
             if (!apiKey) {
-                throw new Error('IPHub API key not configured');
-            }
+                // Try free tier without API key
+                const response = await axios.get(`https://v2.api.iphub.info/guest/ip/${ip}`, {
+                    timeout: 5000,
+                    headers: {
+                        'User-Agent': 'IP-Tracker/2.0'
+                    }
+                });
 
-            const response = await axios.get(`https://v2.api.iphub.info/guest/ip/${ip}`, {
-                timeout: 5000,
-                headers: {
-                    'User-Agent': 'IP-Tracker/2.0',
-                    'X-Key': apiKey
+                if (response.data && response.data.block !== undefined) {
+                    const isBlocked = response.data.block === 1;
+                    return {
+                        isVpn: isBlocked,
+                        isProxy: isBlocked,
+                        isTor: response.data.type === 'tor',
+                        isHosting: response.data.type === 'hosting',
+                        vpnProvider: isBlocked ? 'Detected by IPHub (Free)' : null,
+                        proxyType: isBlocked ? 'detected' : null,
+                        proxyLevel: isBlocked ? 'anonymous' : 'transparent'
+                    };
                 }
-            });
+            } else {
+                // Use API key for better results
+                const response = await axios.get(`https://v2.api.iphub.info/guest/ip/${ip}`, {
+                    timeout: 5000,
+                    headers: {
+                        'User-Agent': 'IP-Tracker/2.0',
+                        'X-Key': apiKey
+                    }
+                });
 
-            if (response.data && response.data.block !== undefined) {
-                const isBlocked = response.data.block === 1;
-                return {
-                    isVpn: isBlocked,
-                    isProxy: isBlocked,
-                    isTor: response.data.type === 'tor',
-                    isHosting: response.data.type === 'hosting',
-                    vpnProvider: isBlocked ? 'Detected by IPHub' : null,
-                    proxyType: isBlocked ? 'detected' : null,
-                    proxyLevel: isBlocked ? 'anonymous' : 'transparent'
-                };
+                if (response.data && response.data.block !== undefined) {
+                    const isBlocked = response.data.block === 1;
+                    return {
+                        isVpn: isBlocked,
+                        isProxy: isBlocked,
+                        isTor: response.data.type === 'tor',
+                        isHosting: response.data.type === 'hosting',
+                        vpnProvider: isBlocked ? 'Detected by IPHub' : null,
+                        proxyType: isBlocked ? 'detected' : null,
+                        proxyLevel: isBlocked ? 'anonymous' : 'transparent'
+                    };
+                }
             }
             return null;
         } catch (error) {
@@ -497,6 +590,7 @@ class IPTrackingService {
             const locationData = await this.getLocationData(ip);
             const isp = locationData.isp?.toLowerCase() || '';
             const org = locationData.org?.toLowerCase() || '';
+            const as = locationData.as?.toLowerCase() || '';
             
             // Common VPN/Proxy providers and hosting companies
             const vpnKeywords = [
@@ -504,32 +598,61 @@ class IPTrackingService {
                 'cyberghost', 'private internet access', 'pia', 'mullvad',
                 'windscribe', 'proton', 'tunnelbear', 'hide.me', 'purevpn',
                 'ipvanish', 'hotspot shield', 'zenmate', 'hoxx', 'browsec',
-                'torguard', 'airvpn', 'vpn.ac', 'vpnsecure', 'vpnunlimited'
+                'torguard', 'airvpn', 'vpn.ac', 'vpnsecure', 'vpnunlimited',
+                'vyprvpn', 'safervpn', 'buffered', 'ibvpn', 'vpnbaron',
+                'vpnjack', 'vpnsecure', 'vpnunlimited', 'vpn.ac', 'vpnbaron'
             ];
             
             const hostingKeywords = [
                 'amazon', 'aws', 'google', 'cloud', 'digitalocean', 'linode',
                 'vultr', 'ovh', 'hetzner', 'contabo', 'hostinger', 'godaddy',
                 'bluehost', 'hostgator', 'dreamhost', 'a2 hosting', 'inmotion',
-                'liquid web', 'siteground', 'wp engine', 'kinsta', 'flywheel'
+                'liquid web', 'siteground', 'wp engine', 'kinsta', 'flywheel',
+                'rackspace', 'softlayer', 'joyent', 'scaleway', 'packet',
+                'bare metal', 'dedicated', 'colocation', 'datacenter'
+            ];
+
+            const torKeywords = [
+                'tor', 'torproject', 'tor network', 'onion', 'exit node'
             ];
 
             const isVpn = vpnKeywords.some(keyword => 
-                isp.includes(keyword) || org.includes(keyword)
+                isp.includes(keyword) || org.includes(keyword) || as.includes(keyword)
             );
             
             const isHosting = hostingKeywords.some(keyword => 
-                isp.includes(keyword) || org.includes(keyword)
+                isp.includes(keyword) || org.includes(keyword) || as.includes(keyword)
             );
+
+            const isTor = torKeywords.some(keyword => 
+                isp.includes(keyword) || org.includes(keyword) || as.includes(keyword)
+            );
+
+            // Additional heuristics
+            let proxyLevel = 'transparent';
+            let vpnProvider = null;
+
+            if (isVpn) {
+                // Try to identify specific VPN provider
+                if (isp.includes('nord') || org.includes('nord')) vpnProvider = 'NordVPN';
+                else if (isp.includes('express') || org.includes('express')) vpnProvider = 'ExpressVPN';
+                else if (isp.includes('surfshark') || org.includes('surfshark')) vpnProvider = 'Surfshark';
+                else if (isp.includes('cyberghost') || org.includes('cyberghost')) vpnProvider = 'CyberGhost';
+                else if (isp.includes('proton') || org.includes('proton')) vpnProvider = 'ProtonVPN';
+                else if (isp.includes('mullvad') || org.includes('mullvad')) vpnProvider = 'Mullvad';
+                else vpnProvider = 'Unknown VPN Provider';
+
+                proxyLevel = 'anonymous';
+            }
 
             return {
                 isVpn,
-                isProxy: isVpn,
-                isTor: false, // Can't detect TOR from ISP alone
+                isProxy: isVpn || isTor,
+                isTor,
                 isHosting,
-                vpnProvider: isVpn ? 'Detected by ISP analysis' : null,
-                proxyType: isVpn ? 'detected' : null,
-                proxyLevel: isVpn ? 'anonymous' : 'transparent'
+                vpnProvider,
+                proxyType: isVpn ? 'vpn' : (isTor ? 'tor' : null),
+                proxyLevel
             };
         } catch (error) {
             throw new Error(`Heuristic detection error: ${error.message}`);
