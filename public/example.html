@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Tracker Implementation Example</title>
+    
+    <!-- IP Tracker Configuration -->
+    <script>
+        window.IPTrackerConfig = {
+            trackingCode: 'ip_your_user_id_timestamp_random', // Replace with your actual tracking code
+            website: 'yourdomain.com', // Replace with your domain
+            enableRealTime: true,
+            enableVPNDetection: true,
+            enableDeviceFingerprinting: true,
+            enableBehavioralTracking: true,
+            privacyMode: 'standard'
+        };
+    </script>
+    
+    <!-- IP Tracker Script -->
+    <script src="https://yourdomain.com/tracking-script.js"></script>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .header {
+            background: #f0f0f0;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .code-block {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            margin: 15px 0;
+            border-left: 4px solid #007cba;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        button {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #005a87;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 IP Tracker Implementation Example</h1>
+        <p>This page demonstrates how to implement the IP Tracker script on your website.</p>
+    </div>
+
+    <h2>📋 Implementation Steps</h2>
+    
+    <h3>1. Basic Implementation</h3>
+    <p>Add this code to your HTML <code>&lt;head&gt;</code> section:</p>
+    
+    <div class="code-block">&lt;!-- IP Tracker Configuration --&gt;
+&lt;script&gt;
+    window.IPTrackerConfig = {
+        trackingCode: 'ip_your_user_id_timestamp_random',
+        website: 'yourdomain.com',
+        enableRealTime: true,
+        enableVPNDetection: true,
+        enableDeviceFingerprinting: true,
+        enableBehavioralTracking: true,
+        privacyMode: 'standard'
+    };
+&lt;/script&gt;
+
+&lt;!-- IP Tracker Script --&gt;
+&lt;script src="https://yourdomain.com/tracking-script.js"&gt;&lt;/script&gt;</div>
+
+    <h3>2. Configuration Options</h3>
+    <ul>
+        <li><strong>trackingCode</strong>: Your unique tracking code from the dashboard</li>
+        <li><strong>website</strong>: Your website domain</li>
+        <li><strong>enableRealTime</strong>: Enable real-time tracking and heartbeats</li>
+        <li><strong>enableVPNDetection</strong>: Enable VPN and proxy detection</li>
+        <li><strong>enableDeviceFingerprinting</strong>: Enable device fingerprinting</li>
+        <li><strong>enableBehavioralTracking</strong>: Track user behavior and interactions</li>
+        <li><strong>privacyMode</strong>: 'standard', 'enhanced', or 'minimal'</li>
+    </ul>
+
+    <h3>3. Advanced Usage</h3>
+    <p>You can also use the IP Tracker API programmatically:</p>
+    
+    <div class="code-block">// Track custom events
+IPTracker.trackEvent('button_click', { buttonId: 'signup', page: 'homepage' });
+
+// Get current tracking data
+const data = IPTracker.getData();
+console.log('Current tracking data:', data);
+
+// Manually track something
+IPTracker.track({ customField: 'customValue' });</div>
+
+    <h2>🧪 Test the Tracking</h2>
+    <p>Click the buttons below to test different tracking features:</p>
+    
+    <button onclick="testCustomEvent()">Track Custom Event</button>
+    <button onclick="testManualTracking()">Manual Tracking</button>
+    <button onclick="showTrackingData()">Show Current Data</button>
+    <button onclick="testFormInteraction()">Test Form Interaction</button>
+
+    <h2>📱 Responsive Implementation</h2>
+    <p>For mobile-first websites, the script automatically adapts and tracks:</p>
+    <ul>
+        <li>Touch events and gestures</li>
+        <li>Mobile-specific device information</li>
+        <li>Responsive viewport changes</li>
+        <li>Mobile browser capabilities</li>
+    </ul>
+
+    <h2>🔒 Privacy and Compliance</h2>
+    <div class="warning">
+        <strong>Important:</strong> Make sure to comply with privacy laws (GDPR, CCPA, etc.) and inform users about tracking.
+    </div>
+    
+    <p>The script supports different privacy modes:</p>
+    <ul>
+        <li><strong>minimal</strong>: Basic IP tracking only</li>
+        <li><strong>standard</strong>: Standard tracking with device fingerprinting</li>
+        <li><strong>enhanced</strong>: Full tracking with behavioral analysis</li>
+    </ul>
+
+    <h2>📊 Dashboard Integration</h2>
+    <p>Once implemented, you'll see real-time data in your IP Tracker dashboard:</p>
+    <ul>
+        <li>Visitor locations on an interactive map</li>
+        <li>VPN and proxy detection alerts</li>
+        <li>Device and browser analytics</li>
+        <li>Behavioral patterns and fraud detection</li>
+        <li>Real-time visitor monitoring</li>
+    </ul>
+
+    <h2>🚀 Performance Optimization</h2>
+    <p>The script is optimized for performance:</p>
+    <ul>
+        <li>Asynchronous data collection</li>
+        <li>Throttled event handling</li>
+        <li>Efficient data compression</li>
+        <li>Minimal impact on page load time</li>
+    </ul>
+
+    <div class="success">
+        <strong>Success!</strong> If you see "IP Tracker: Initialized successfully" in the console, the tracking is working correctly.
+    </div>
+
+    <h2>📞 Support</h2>
+    <p>For technical support or questions about implementation, contact your IP Tracker administrator.</p>
+
+    <script>
+        // Test functions
+        function testCustomEvent() {
+            IPTracker.trackEvent('test_button_click', {
+                button: 'custom_event_test',
+                timestamp: new Date().toISOString(),
+                page: window.location.pathname
+            });
+            alert('Custom event tracked! Check the console for details.');
+        }
+
+        function testManualTracking() {
+            IPTracker.track({
+                type: 'manual_test',
+                testData: 'This is a manual tracking test',
+                timestamp: new Date().toISOString()
+            });
+            alert('Manual tracking test sent!');
+        }
+
+        function showTrackingData() {
+            const data = IPTracker.getData();
+            console.log('Current IP Tracker Data:', data);
+            alert('Check the console for current tracking data!');
+        }
+
+        function testFormInteraction() {
+            // Create a test form interaction
+            const testEvent = new Event('input');
+            document.dispatchEvent(testEvent);
+            alert('Form interaction test completed!');
+        }
+
+        // Show initialization status
+        window.addEventListener('load', () => {
+            if (window.IPTracker) {
+                console.log('✅ IP Tracker is ready and working!');
+                console.log('Session ID:', IPTracker.getSessionId());
+                console.log('Computer ID:', IPTracker.getComputerId());
+            } else {
+                console.error('❌ IP Tracker failed to initialize');
+            }
+        });
+    </script>
+</body>
+</html>
