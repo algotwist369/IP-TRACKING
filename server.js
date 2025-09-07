@@ -611,54 +611,79 @@ app.post('/api/track', async (req, res) => {
         // Determine final visit type
         const finalVisitType = visitType || getVisitType(referer, website);
 
-        // Enhanced tracking logic - be more strict about what we track
+        // Enhanced tracking logic - allow legitimate new visits while preventing spam
         let shouldTrack = false;
         let skipReason = '';
 
-        // RULE 1: Check if this session already has a tracked visit for this website
-        const existingVisitInSession = await Visit.findOne({
+        // Check if this session already has a recent tracked visit for this website
+        const recentVisitInSession = await Visit.findOne({
             sessionId: session.sessionId,
             website: website,
-            timestamp: { $gte: new Date(session.firstVisit) }
+            timestamp: {
+                $gte: new Date(Date.now() - 5 * 60 * 1000) // Last 5 minutes
+            }
         });
 
-        if (existingVisitInSession) {
+        const lastVisitInSession = await Visit.findOne({
+            sessionId: session.sessionId,
+            website: website
+        }).sort({ timestamp: -1 });
+
+        const timeSinceLastVisit = lastVisitInSession ?
+            Date.now() - lastVisitInSession.timestamp.getTime() : Infinity;
+
+        // RULE 1: Never track internal navigation
+        if (finalVisitType === 'internal') {
             shouldTrack = false;
-            skipReason = 'Session already has tracked visit for this website';
+            skipReason = 'Internal navigation within same domain';
         }
-        // RULE 2: Track new sessions (first time visitor)
+        // RULE 2: Prevent rapid-fire requests (less than 5 minutes)
+        else if (recentVisitInSession) {
+            shouldTrack = false;
+            skipReason = 'Recent visit already tracked (within 5 minutes)';
+        }
+        // RULE 3: Track new sessions (first time visitor)
         else if (isNewSession) {
             shouldTrack = true;
             skipReason = 'New session - first visit';
         }
-        // RULE 3: Track external visits from search engines, social media, etc.
-        else if (finalVisitType === 'external' && isExternalTraffic(referer)) {
-            shouldTrack = true;
-            skipReason = 'External traffic from search engine or social media';
-        }
-        // RULE 4: Track direct visits (typed URL, bookmark)
+        // RULE 4: Track direct visits if enough time has passed
         else if (finalVisitType === 'direct') {
-            shouldTrack = true;
-            skipReason = 'Direct visit';
-        }
-        // RULE 5: Never track internal navigation
-        else if (finalVisitType === 'internal') {
-            shouldTrack = false;
-            skipReason = 'Internal navigation within same domain';
-        }
-        // RULE 6: For other cases, check time-based rules
-        else {
-            const lastVisitTime = session.lastActivity || session.firstVisit;
-            const timeSinceLastActivity = Date.now() - lastVisitTime.getTime();
-            const minInterval = 5 * 60 * 1000; // 5 minutes
-
-            if (timeSinceLastActivity >= minInterval) {
+            const minDirectInterval = 5 * 60 * 1000; // 5 minutes for direct visits
+            if (timeSinceLastVisit >= minDirectInterval) {
                 shouldTrack = true;
-                skipReason = 'Sufficient time passed since last activity';
+                skipReason = 'Direct visit after sufficient time interval';
             } else {
                 shouldTrack = false;
-                skipReason = 'Too soon since last activity';
+                skipReason = 'Direct visit too soon since last visit';
             }
+        }
+        // RULE 5: Track external visits from search engines, social media, etc.
+        else if (finalVisitType === 'external' && isExternalTraffic(referer)) {
+            const minExternalInterval = 5 * 60 * 1000; // 5 minutes for external visits
+            if (timeSinceLastVisit >= minExternalInterval) {
+                shouldTrack = true;
+                skipReason = 'External traffic from search engine or social media';
+            } else {
+                shouldTrack = false;
+                skipReason = 'External visit too soon since last visit';
+            }
+        }
+        // RULE 6: Track other external visits with time check
+        else if (finalVisitType === 'external') {
+            const minInterval = 5 * 60 * 1000; // 5 minutes
+            if (timeSinceLastVisit >= minInterval) {
+                shouldTrack = true;
+                skipReason = 'External visit after sufficient time interval';
+            } else {
+                shouldTrack = false;
+                skipReason = 'External visit too soon since last visit';
+            }
+        }
+        // RULE 7: Default case - don't track
+        else {
+            shouldTrack = false;
+            skipReason = 'Default - conditions not met for tracking';
         }
 
         // Log decision
@@ -770,6 +795,7 @@ app.post('/api/track', async (req, res) => {
         });
     }
 });
+
 // Get dashboard data
 app.get('/api/dashboard', async (req, res) => {
     try {
@@ -1252,6 +1278,642 @@ app.get('/api/vpn-stats', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error fetching VPN statistics'
+        });
+    }
+});
+
+
+
+
+// ========================== new code ==========================
+
+// Get comprehensive IP analytics across all websites
+app.get('/api/ip-comprehensive', async (req, res) => {
+    try {
+        const timeFilter = req.query.timeframe || '24h';
+        let timeRange;
+
+        switch (timeFilter) {
+            case '1h':
+                timeRange = new Date(Date.now() - 60 * 60 * 1000);
+                break;
+            case '6h':
+                timeRange = new Date(Date.now() - 6 * 60 * 60 * 1000);
+                break;
+            case '24h':
+                timeRange = new Date(Date.now() - 24 * 60 * 60 * 1000);
+                break;
+            case '7d':
+                timeRange = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                break;
+            case '30d':
+                timeRange = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+                break;
+            default:
+                timeRange = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        }
+
+        // Get comprehensive IP data with cross-website analysis
+        const ipAnalytics = await Visit.aggregate([
+            { $match: { timestamp: { $gte: timeRange } } },
+            {
+                $group: {
+                    _id: '$ip',
+                    // Website data
+                    websites: {
+                        $push: {
+                            website: '$website',
+                            timestamp: '$timestamp',
+                            referer: '$referer',
+                            visitType: '$visitType',
+                            userAgent: '$userAgent',
+                            sessionId: '$sessionId',
+                            deviceFingerprint: '$deviceFingerprint',
+                            computerId: '$computerId'
+                        }
+                    },
+                    uniqueWebsites: { $addToSet: '$website' },
+                    totalVisits: { $sum: 1 },
+
+                    // Location data
+                    country: { $first: '$country' },
+                    region: { $first: '$region' },
+                    city: { $first: '$city' },
+                    district: { $first: '$district' },
+                    timezone: { $first: '$timezone' },
+                    isp: { $first: '$isp' },
+                    lat: { $first: '$lat' },
+                    lon: { $first: '$lon' },
+                    accuracy: { $first: '$accuracy' },
+
+                    // Security data
+                    isVpn: { $first: '$isVpn' },
+                    isProxy: { $first: '$isProxy' },
+                    isTor: { $first: '$isTor' },
+                    vpnProvider: { $first: '$vpnProvider' },
+                    proxyType: { $first: '$proxyType' },
+
+                    // Visit patterns
+                    firstVisit: { $min: '$timestamp' },
+                    lastVisit: { $max: '$timestamp' },
+                    visitTypes: { $addToSet: '$visitType' },
+                    referrers: { $addToSet: '$referer' },
+                    userAgents: { $addToSet: '$userAgent' },
+
+                    // Device data
+                    deviceFingerprints: { $addToSet: '$deviceFingerprint' },
+                    computerIds: { $addToSet: '$computerId' },
+                    screenResolutions: { $addToSet: '$screenResolution' },
+                    platforms: { $addToSet: '$platform' },
+                    languages: { $addToSet: '$language' }
+                }
+            },
+            {
+                $project: {
+                    ip: '$_id',
+                    totalVisits: 1,
+                    websiteCount: { $size: '$uniqueWebsites' },
+                    uniqueWebsites: 1,
+                    websites: 1,
+
+                    // Location
+                    location: {
+                        country: '$country',
+                        region: '$region',
+                        city: '$city',
+                        district: '$district',
+                        timezone: '$timezone',
+                        coordinates: {
+                            lat: '$lat',
+                            lon: '$lon'
+                        },
+                        accuracy: '$accuracy'
+                    },
+
+                    // ISP and Security
+                    isp: 1,
+                    security: {
+                        isVpn: '$isVpn',
+                        isProxy: '$isProxy',
+                        isTor: '$isTor',
+                        vpnProvider: '$vpnProvider',
+                        proxyType: '$proxyType',
+                        riskLevel: {
+                            $switch: {
+                                branches: [
+                                    { case: '$isTor', then: 'HIGH' },
+                                    { case: { $or: ['$isVpn', '$isProxy'] }, then: 'MEDIUM' },
+                                ],
+                                default: 'LOW'
+                            }
+                        }
+                    },
+
+                    // Visit patterns
+                    visitPattern: {
+                        firstVisit: '$firstVisit',
+                        lastVisit: '$lastVisit',
+                        duration: { $subtract: ['$lastVisit', '$firstVisit'] },
+                        visitTypes: '$visitTypes',
+                        referrers: {
+                            $map: {
+                                input: '$referrers',
+                                as: 'ref',
+                                in: {
+                                    url: '$$ref',
+                                    isExternal: {
+                                        $cond: [
+                                            { $eq: ['$$ref', null] },
+                                            false,
+                                            true
+                                        ]
+                                    },
+                                    source: {
+                                        $switch: {
+                                            branches: [
+                                                { case: { $eq: ['$$ref', null] }, then: 'Direct' },
+                                                { case: { $regexMatch: { input: '$$ref', regex: 'google', options: 'i' } }, then: 'Google' },
+                                                { case: { $regexMatch: { input: '$$ref', regex: 'facebook|fb', options: 'i' } }, then: 'Facebook' },
+                                                { case: { $regexMatch: { input: '$$ref', regex: 'twitter|x.com', options: 'i' } }, then: 'Twitter/X' },
+                                                { case: { $regexMatch: { input: '$$ref', regex: 'linkedin', options: 'i' } }, then: 'LinkedIn' },
+                                                { case: { $regexMatch: { input: '$$ref', regex: 'instagram', options: 'i' } }, then: 'Instagram' },
+                                                { case: { $regexMatch: { input: '$$ref', regex: 'youtube', options: 'i' } }, then: 'YouTube' },
+                                                { case: { $regexMatch: { input: '$$ref', regex: 'bing', options: 'i' } }, then: 'Bing' },
+                                                { case: { $regexMatch: { input: '$$ref', regex: 'yahoo', options: 'i' } }, then: 'Yahoo' },
+                                                { case: { $regexMatch: { input: '$$ref', regex: 'reddit', options: 'i' } }, then: 'Reddit' },
+                                                { case: { $regexMatch: { input: '$$ref', regex: 'pinterest', options: 'i' } }, then: 'Pinterest' }
+                                            ],
+                                            default: 'Other External'
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+
+                    // Device analysis
+                    deviceAnalysis: {
+                        uniqueFingerprints: { $size: '$deviceFingerprints' },
+                        uniqueComputerIds: { $size: '$computerIds' },
+                        screenResolutions: '$screenResolutions',
+                        platforms: '$platforms',
+                        languages: '$languages',
+                        suspiciousActivity: {
+                            multipleDevices: { $gt: [{ $size: '$deviceFingerprints' }, 1] },
+                            multipleComputers: { $gt: [{ $size: '$computerIds' }, 1] }
+                        }
+                    },
+
+                    // Fraud indicators
+                    fraudScore: {
+                        $add: [
+                            { $cond: ['$isVpn', 25, 0] },
+                            { $cond: ['$isProxy', 20, 0] },
+                            { $cond: ['$isTor', 50, 0] },
+                            { $cond: [{ $gt: ['$totalVisits', 10] }, 15, 0] },
+                            { $cond: [{ $gt: [{ $size: '$uniqueWebsites' }, 3] }, 10, 0] },
+                            { $cond: [{ $gt: [{ $size: '$deviceFingerprints' }, 1] }, 10, 0] }
+                        ]
+                    }
+                }
+            },
+            { $sort: { totalVisits: -1, fraudScore: -1 } }
+        ]);
+
+        // Get summary statistics
+        const summary = await Visit.aggregate([
+            { $match: { timestamp: { $gte: timeRange } } },
+            {
+                $group: {
+                    _id: null,
+                    totalVisits: { $sum: 1 },
+                    uniqueIPs: { $addToSet: '$ip' },
+                    uniqueWebsites: { $addToSet: '$website' },
+                    vpnVisits: { $sum: { $cond: ['$isVpn', 1, 0] } },
+                    proxyVisits: { $sum: { $cond: ['$isProxy', 1, 0] } },
+                    torVisits: { $sum: { $cond: ['$isTor', 1, 0] } },
+                    externalVisits: { $sum: { $cond: [{ $eq: ['$visitType', 'external'] }, 1, 0] } },
+                    directVisits: { $sum: { $cond: [{ $eq: ['$visitType', 'direct'] }, 1, 0] } },
+                    countries: { $addToSet: '$country' }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    totalVisits: 1,
+                    uniqueIPs: { $size: '$uniqueIPs' },
+                    uniqueWebsites: { $size: '$uniqueWebsites' },
+                    uniqueCountries: { $size: '$countries' },
+                    vpnVisits: 1,
+                    proxyVisits: 1,
+                    torVisits: 1,
+                    externalVisits: 1,
+                    directVisits: 1,
+                    securityThreatPercentage: {
+                        $multiply: [
+                            { $divide: [{ $add: ['$vpnVisits', '$proxyVisits', '$torVisits'] }, '$totalVisits'] },
+                            100
+                        ]
+                    }
+                }
+            }
+        ]);
+
+        res.json({
+            success: true,
+            timeframe: timeFilter,
+            summary: summary[0] || {
+                totalVisits: 0,
+                uniqueIPs: 0,
+                uniqueWebsites: 0,
+                uniqueCountries: 0,
+                vpnVisits: 0,
+                proxyVisits: 0,
+                torVisits: 0,
+                externalVisits: 0,
+                directVisits: 0,
+                securityThreatPercentage: 0
+            },
+            ipAnalytics: ipAnalytics
+        });
+    } catch (error) {
+        console.error('Error fetching comprehensive IP data:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching IP analytics'
+        });
+    }
+});
+
+// Get cross-website visitor analysis
+app.get('/api/cross-website-analysis', async (req, res) => {
+    try {
+        const timeRange = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+        const crossWebsiteVisitors = await Visit.aggregate([
+            { $match: { timestamp: { $gte: timeRange } } },
+            {
+                $group: {
+                    _id: '$ip',
+                    websites: {
+                        $push: {
+                            website: '$website',
+                            visits: 1,
+                            firstVisit: '$timestamp',
+                            referer: '$referer',
+                            visitType: '$visitType'
+                        }
+                    },
+                    uniqueWebsites: { $addToSet: '$website' },
+                    totalVisits: { $sum: 1 },
+                    country: { $first: '$country' },
+                    city: { $first: '$city' },
+                    isVpn: { $first: '$isVpn' },
+                    isProxy: { $first: '$isProxy' }
+                }
+            },
+            {
+                $match: {
+                    $expr: { $gt: [{ $size: '$uniqueWebsites' }, 1] } // Only IPs that visited multiple websites
+                }
+            },
+            {
+                $project: {
+                    ip: '$_id',
+                    websiteCount: { $size: '$uniqueWebsites' },
+                    websites: '$uniqueWebsites',
+                    totalVisits: 1,
+                    location: {
+                        country: '$country',
+                        city: '$city'
+                    },
+                    security: {
+                        isVpn: '$isVpn',
+                        isProxy: '$isProxy'
+                    },
+                    suspicionLevel: {
+                        $switch: {
+                            branches: [
+                                { case: { $gt: [{ $size: '$uniqueWebsites' }, 5] }, then: 'HIGH' },
+                                { case: { $gt: [{ $size: '$uniqueWebsites' }, 2] }, then: 'MEDIUM' },
+                            ],
+                            default: 'LOW'
+                        }
+                    }
+                }
+            },
+            { $sort: { websiteCount: -1, totalVisits: -1 } }
+        ]);
+
+        res.json({
+            success: true,
+            crossWebsiteVisitors: crossWebsiteVisitors
+        });
+    } catch (error) {
+        console.error('Error fetching cross-website analysis:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching cross-website analysis'
+        });
+    }
+});
+
+// Get referrer analysis with external source detection
+app.get('/api/referrer-analysis', async (req, res) => {
+    try {
+        const timeRange = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+        const referrerAnalysis = await Visit.aggregate([
+            { $match: { timestamp: { $gte: timeRange } } },
+            {
+                $project: {
+                    ip: 1,
+                    website: 1,
+                    referer: 1,
+                    visitType: 1,
+                    timestamp: 1,
+                    isVpn: 1,
+                    country: 1,
+                    referrerSource: {
+                        $switch: {
+                            branches: [
+                                { case: { $eq: ['$referer', null] }, then: 'Direct' },
+                                { case: { $regexMatch: { input: '$referer', regex: 'google', options: 'i' } }, then: 'Google' },
+                                { case: { $regexMatch: { input: '$referer', regex: 'facebook|fb', options: 'i' } }, then: 'Facebook' },
+                                { case: { $regexMatch: { input: '$referer', regex: 'twitter|x.com', options: 'i' } }, then: 'Twitter/X' },
+                                { case: { $regexMatch: { input: '$referer', regex: 'linkedin', options: 'i' } }, then: 'LinkedIn' },
+                                { case: { $regexMatch: { input: '$referer', regex: 'instagram', options: 'i' } }, then: 'Instagram' },
+                                { case: { $regexMatch: { input: '$referer', regex: 'youtube', options: 'i' } }, then: 'YouTube' },
+                                { case: { $regexMatch: { input: '$referer', regex: 'bing', options: 'i' } }, then: 'Bing' },
+                                { case: { $regexMatch: { input: '$referer', regex: 'yahoo', options: 'i' } }, then: 'Yahoo' },
+                                { case: { $regexMatch: { input: '$referer', regex: 'reddit', options: 'i' } }, then: 'Reddit' },
+                                { case: { $regexMatch: { input: '$referer', regex: 'pinterest', options: 'i' } }, then: 'Pinterest' }
+                            ],
+                            default: 'Other External'
+                        }
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        source: '$referrerSource',
+                        website: '$website'
+                    },
+                    count: { $sum: 1 },
+                    uniqueIPs: { $addToSet: '$ip' },
+                    vpnCount: { $sum: { $cond: ['$isVpn', 1, 0] } },
+                    countries: { $addToSet: '$country' },
+                    referrers: { $addToSet: '$referer' }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    source: '$_id.source',
+                    website: '$_id.website',
+                    visits: '$count',
+                    uniqueVisitors: { $size: '$uniqueIPs' },
+                    vpnVisits: '$vpnCount',
+                    countries: { $size: '$countries' },
+                    sampleReferrers: { $slice: ['$referrers', 5] }
+                }
+            },
+            { $sort: { visits: -1 } }
+        ]);
+
+        // Group by source for summary
+        const sourceSummary = await Visit.aggregate([
+            { $match: { timestamp: { $gte: timeRange } } },
+            {
+                $project: {
+                    referrerSource: {
+                        $switch: {
+                            branches: [
+                                { case: { $eq: ['$referer', null] }, then: 'Direct' },
+                                { case: { $regexMatch: { input: '$referer', regex: 'google', options: 'i' } }, then: 'Google' },
+                                { case: { $regexMatch: { input: '$referer', regex: 'facebook|fb', options: 'i' } }, then: 'Facebook' },
+                                { case: { $regexMatch: { input: '$referer', regex: 'twitter|x.com', options: 'i' } }, then: 'Twitter/X' },
+                                { case: { $regexMatch: { input: '$referer', regex: 'linkedin', options: 'i' } }, then: 'LinkedIn' },
+                                { case: { $regexMatch: { input: '$referer', regex: 'instagram', options: 'i' } }, then: 'Instagram' },
+                                { case: { $regexMatch: { input: '$referer', regex: 'youtube', options: 'i' } }, then: 'YouTube' },
+                                { case: { $regexMatch: { input: '$referer', regex: 'bing', options: 'i' } }, then: 'Bing' },
+                                { case: { $regexMatch: { input: '$referer', regex: 'yahoo', options: 'i' } }, then: 'Yahoo' },
+                                { case: { $regexMatch: { input: '$referer', regex: 'reddit', options: 'i' } }, then: 'Reddit' },
+                                { case: { $regexMatch: { input: '$referer', regex: 'pinterest', options: 'i' } }, then: 'Pinterest' }
+                            ],
+                            default: 'Other External'
+                        }
+                    },
+                    ip: 1,
+                    isVpn: 1
+                }
+            },
+            {
+                $group: {
+                    _id: '$referrerSource',
+                    visits: { $sum: 1 },
+                    uniqueIPs: { $addToSet: '$ip' },
+                    vpnCount: { $sum: { $cond: ['$isVpn', 1, 0] } }
+                }
+            },
+            {
+                $project: {
+                    source: '$_id',
+                    visits: 1,
+                    uniqueVisitors: { $size: '$uniqueIPs' },
+                    vpnVisits: '$vpnCount',
+                    vpnPercentage: { $multiply: [{ $divide: ['$vpnCount', '$visits'] }, 100] }
+                }
+            },
+            { $sort: { visits: -1 } }
+        ]);
+
+        res.json({
+            success: true,
+            detailedAnalysis: referrerAnalysis,
+            sourceSummary: sourceSummary
+        });
+    } catch (error) {
+        console.error('Error fetching referrer analysis:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching referrer analysis'
+        });
+    }
+});
+
+// Get high-risk IPs for fraud prevention
+app.get('/api/fraud-alerts', async (req, res) => {
+    try {
+        const timeRange = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+        const fraudAlerts = await Visit.aggregate([
+            { $match: { timestamp: { $gte: timeRange } } },
+            {
+                $group: {
+                    _id: '$ip',
+                    visits: { $sum: 1 },
+                    websites: { $addToSet: '$website' },
+                    countries: { $addToSet: '$country' },
+                    isVpn: { $first: '$isVpn' },
+                    isProxy: { $first: '$isProxy' },
+                    isTor: { $first: '$isTor' },
+                    vpnProvider: { $first: '$vpnProvider' },
+                    userAgents: { $addToSet: '$userAgent' },
+                    deviceFingerprints: { $addToSet: '$deviceFingerprint' },
+                    firstSeen: { $min: '$timestamp' },
+                    lastSeen: { $max: '$timestamp' },
+                    visitTypes: { $addToSet: '$visitType' },
+                    location: {
+                        $first: {
+                            country: '$country',
+                            city: '$city',
+                            isp: '$isp'
+                        }
+                    }
+                }
+            },
+            {
+                $project: {
+                    ip: '$_id',
+                    visits: 1,
+                    websiteCount: { $size: '$websites' },
+                    websites: 1,
+                    location: 1,
+                    security: {
+                        isVpn: '$isVpn',
+                        isProxy: '$isProxy',
+                        isTor: '$isTor',
+                        vpnProvider: '$vpnProvider'
+                    },
+                    suspicious: {
+                        multipleCountries: { $gt: [{ $size: '$countries' }, 1] },
+                        multipleUserAgents: { $gt: [{ $size: '$userAgents' }, 2] },
+                        multipleDevices: { $gt: [{ $size: '$deviceFingerprints' }, 1] }
+                    },
+                    fraudScore: {
+                        $add: [
+                            { $cond: ['$isTor', 50, 0] },
+                            { $cond: ['$isVpn', 25, 0] },
+                            { $cond: ['$isProxy', 20, 0] },
+                            { $cond: [{ $gt: ['$visits', 20] }, 30, 0] },
+                            { $cond: [{ $gt: [{ $size: '$websites' }, 5] }, 25, 0] },
+                            { $cond: [{ $gt: [{ $size: '$countries' }, 1] }, 15, 0] },
+                            { $cond: [{ $gt: [{ $size: '$userAgents' }, 2] }, 10, 0] },
+                            { $cond: [{ $gt: [{ $size: '$deviceFingerprints' }, 1] }, 10, 0] }
+                        ]
+                    },
+                    activityPattern: {
+                        firstSeen: '$firstSeen',
+                        lastSeen: '$lastSeen',
+                        duration: { $subtract: ['$lastSeen', '$firstSeen'] },
+                        visitTypes: '$visitTypes'
+                    }
+                }
+            },
+            {
+                $match: {
+                    $or: [
+                        { fraudScore: { $gte: 50 } },
+                        { visits: { $gte: 15 } },
+                        { websiteCount: { $gte: 4 } },
+                        { 'security.isTor': true }
+                    ]
+                }
+            },
+            { $sort: { fraudScore: -1, visits: -1 } }
+        ]);
+
+        res.json({
+            success: true,
+            fraudAlerts: fraudAlerts,
+            alertCount: fraudAlerts.length
+        });
+    } catch (error) {
+        console.error('Error fetching fraud alerts:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching fraud alerts'
+        });
+    }
+});
+
+// Export high-risk IPs for blocking (CSV format)
+app.get('/api/export-blocklist', async (req, res) => {
+    try {
+        const timeRange = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // Last 7 days
+        const minVisits = parseInt(req.query.minVisits) || 10;
+        const minFraudScore = parseInt(req.query.minFraudScore) || 50;
+
+        const highRiskIPs = await Visit.aggregate([
+            { $match: { timestamp: { $gte: timeRange } } },
+            {
+                $group: {
+                    _id: '$ip',
+                    visits: { $sum: 1 },
+                    websites: { $addToSet: '$website' },
+                    isVpn: { $first: '$isVpn' },
+                    isProxy: { $first: '$isProxy' },
+                    isTor: { $first: '$isTor' },
+                    country: { $first: '$country' },
+                    isp: { $first: '$isp' }
+                }
+            },
+            {
+                $project: {
+                    ip: '$_id',
+                    visits: 1,
+                    websiteCount: { $size: '$websites' },
+                    fraudScore: {
+                        $add: [
+                            { $cond: ['$isTor', 50, 0] },
+                            { $cond: ['$isVpn', 25, 0] },
+                            { $cond: ['$isProxy', 20, 0] },
+                            { $cond: [{ $gt: ['$visits', 20] }, 30, 0] },
+                            { $cond: [{ $gt: [{ $size: '$websites' }, 5] }, 25, 0] }
+                        ]
+                    },
+                    country: 1,
+                    isp: 1,
+                    isVpn: 1,
+                    isProxy: 1,
+                    isTor: 1
+                }
+            },
+            {
+                $match: {
+                    $or: [
+                        { visits: { $gte: minVisits } },
+                        { fraudScore: { $gte: minFraudScore } },
+                        { isTor: true }
+                    ]
+                }
+            },
+            { $sort: { fraudScore: -1 } }
+        ]);
+
+        // Generate CSV
+        let csv = 'IP,Visits,Websites,FraudScore,Country,ISP,VPN,Proxy,Tor,Reason\n';
+        highRiskIPs.forEach(ip => {
+            const reason = [];
+            if (ip.isTor) reason.push('Tor');
+            if (ip.isVpn) reason.push('VPN');
+            if (ip.isProxy) reason.push('Proxy');
+            if (ip.visits >= 20) reason.push('High Traffic');
+            if (ip.websiteCount >= 5) reason.push('Multiple Sites');
+
+            csv += `${ip.ip},${ip.visits},${ip.websiteCount},${ip.fraudScore},${ip.country},${ip.isp},${ip.isVpn},${ip.isProxy},${ip.isTor},"${reason.join(', ')}"\n`;
+        });
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename=high-risk-ips.csv');
+        res.send(csv);
+    } catch (error) {
+        console.error('Error generating blocklist:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error generating blocklist'
         });
     }
 });
