@@ -128,6 +128,17 @@ const visitSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    // Session tracking for preventing duplicates
+    sessionId: String,
+    visitType: {
+        type: String,
+        enum: ['external', 'direct', 'internal'],
+        default: 'direct'
+    },
+    isFirstVisit: {
+        type: Boolean,
+        default: true
+    },
     // Additional tracking data
     timestamp: {
         type: Date,
@@ -135,7 +146,47 @@ const visitSchema = new mongoose.Schema({
     }
 });
 
+// Session Schema for tracking active sessions
+const sessionSchema = new mongoose.Schema({
+    sessionId: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    ip: {
+        type: String,
+        required: true
+    },
+    website: {
+        type: String,
+        required: true
+    },
+    computerId: String,
+    deviceFingerprint: String,
+    firstVisit: {
+        type: Date,
+        default: Date.now
+    },
+    lastActivity: {
+        type: Date,
+        default: Date.now
+    },
+    visitCount: {
+        type: Number,
+        default: 1
+    },
+    referer: String,
+    userAgent: String,
+    // Session expires after 30 minutes of inactivity
+    expiresAt: {
+        type: Date,
+        default: () => new Date(Date.now() + 30 * 60 * 1000),
+        index: { expireAfterSeconds: 0 }
+    }
+});
+
 const Visit = mongoose.model('Visit', visitSchema);
+const Session = mongoose.model('Session', sessionSchema);
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -148,6 +199,119 @@ function getRealIP(req) {
         req.connection.remoteAddress ||
         req.socket.remoteAddress ||
         (req.connection.socket ? req.connection.socket.remoteAddress : null);
+}
+
+// Generate unique session ID
+function generateSessionId(ip, computerId, deviceFingerprint) {
+    const crypto = require('crypto');
+    const data = `${ip}-${computerId || 'unknown'}-${deviceFingerprint || 'unknown'}-${Date.now()}`;
+    return crypto.createHash('md5').update(data).digest('hex');
+}
+
+// Determine visit type based on referer
+function getVisitType(referer, website) {
+    if (!referer) {
+        return 'direct'; // No referer = direct visit
+    }
+    
+    try {
+        const refererUrl = new URL(referer);
+        const websiteUrl = new URL(website.startsWith('http') ? website : `https://${website}`);
+        
+        // Same domain = internal navigation
+        if (refererUrl.hostname === websiteUrl.hostname) {
+            return 'internal';
+        }
+        
+        // Different domain = external visit
+        return 'external';
+    } catch (error) {
+        // Invalid URL, treat as direct
+        return 'direct';
+    }
+}
+
+// Check if referer is from a search engine or social media (external traffic)
+function isExternalTraffic(referer) {
+    if (!referer) return false;
+    
+    try {
+        const refererUrl = new URL(referer);
+        const hostname = refererUrl.hostname.toLowerCase();
+        
+        // Search engines
+        const searchEngines = [
+            'google.com', 'google.co.in', 'google.co.uk', 'google.ca', 'google.com.au',
+            'bing.com', 'yahoo.com', 'duckduckgo.com', 'baidu.com', 'yandex.com',
+            'ask.com', 'aol.com'
+        ];
+        
+        // Social media platforms
+        const socialMedia = [
+            'facebook.com', 'twitter.com', 'linkedin.com', 'instagram.com',
+            'youtube.com', 'tiktok.com', 'pinterest.com', 'reddit.com',
+            'whatsapp.com', 'telegram.org', 'discord.com'
+        ];
+        
+        // Check if referer is from search engine or social media
+        return searchEngines.some(engine => hostname.includes(engine)) ||
+               socialMedia.some(social => hostname.includes(social));
+    } catch (error) {
+        return false;
+    }
+}
+
+// Session management functions
+async function getOrCreateSession(ip, website, computerId, deviceFingerprint, referer, userAgent) {
+    try {
+        // Try to find existing active session
+        let session = await Session.findOne({
+            ip: ip,
+            website: website,
+            computerId: computerId,
+            deviceFingerprint: deviceFingerprint,
+            expiresAt: { $gt: new Date() }
+        });
+        
+        if (session) {
+            // Update existing session
+            session.lastActivity = new Date();
+            session.visitCount += 1;
+            session.expiresAt = new Date(Date.now() + 30 * 60 * 1000); // Extend session
+            await session.save();
+            return { session, isNewSession: false };
+        } else {
+            // Create new session
+            const sessionId = generateSessionId(ip, computerId, deviceFingerprint);
+            session = new Session({
+                sessionId: sessionId,
+                ip: ip,
+                website: website,
+                computerId: computerId,
+                deviceFingerprint: deviceFingerprint,
+                referer: referer,
+                userAgent: userAgent,
+                firstVisit: new Date(),
+                lastActivity: new Date(),
+                visitCount: 1,
+                expiresAt: new Date(Date.now() + 30 * 60 * 1000)
+            });
+            await session.save();
+            return { session, isNewSession: true };
+        }
+    } catch (error) {
+        console.error('Error managing session:', error);
+        // Fallback: create a basic session
+        const sessionId = generateSessionId(ip, computerId, deviceFingerprint);
+        return {
+            session: {
+                sessionId: sessionId,
+                visitCount: 1,
+                firstVisit: new Date()
+            },
+            isNewSession: true
+        };
+    }
 }
 
 // VPN and Proxy Detection
@@ -422,16 +586,33 @@ app.post('/api/track', async (req, res) => {
             });
         }
 
-        // Check for recent visits from same IP to prevent duplicate tracking within 1 minute
-        const recentVisit = await Visit.findOne({
-            ip: ip,
-            website: website,
-            timestamp: { $gte: new Date(Date.now() - 1 * 60 * 1000) } // Last 1 minute
-        });
+        // Determine visit type
+        const visitType = getVisitType(referer, website);
+        
+        // Get or create session
+        const { session, isNewSession } = await getOrCreateSession(
+            ip, website, computerId, deviceFingerprint, referer, userAgent
+        );
 
-        if (recentVisit) {
-            console.log(`Skipping duplicate visit from IP: ${ip} for website: ${website} within 1 minute`);
-            return res.status(200).json({ success: true, message: 'Visit already tracked recently' });
+        // Only track visits that meet our criteria:
+        // 1. New sessions (first visit)
+        // 2. External visits (from search engines, social media, other websites)
+        // 3. Direct visits (no referer)
+        // Skip: Internal navigation and page refreshes within same session
+        
+        const shouldTrack = isNewSession || 
+                           visitType === 'external' || 
+                           visitType === 'direct' ||
+                           isExternalTraffic(referer);
+
+        if (!shouldTrack) {
+            console.log(`Skipping internal navigation/refresh - IP: ${ip}, Website: ${website}, Session: ${session.sessionId}, Visit Type: ${visitType}`);
+            return res.status(200).json({ 
+                success: true, 
+                message: 'Internal navigation - not tracked',
+                sessionId: session.sessionId,
+                visitType: visitType
+            });
         }
 
         // Get location data and VPN detection
@@ -457,6 +638,9 @@ app.post('/api/track', async (req, res) => {
             maxTouchPoints,
             cookieEnabled,
             doNotTrack: doNotTrack === true || doNotTrack === '1' || doNotTrack === 'true',
+            sessionId: session.sessionId,
+            visitType: visitType,
+            isFirstVisit: isNewSession,
             ...locationData,
             ...vpnData
         });
@@ -478,12 +662,21 @@ app.post('/api/track', async (req, res) => {
             isTor: vpnData.isTor,
             vpnProvider: vpnData.vpnProvider,
             computerId,
+            sessionId: session.sessionId,
+            visitType: visitType,
+            isFirstVisit: isNewSession,
             timestamp: new Date(),
             referer: referer
         });
 
-        console.log(`New visit tracked - IP: ${ip}, Website: ${website}, VPN: ${vpnData.isVpn}, Computer ID: ${computerId}`);
-        res.status(200).json({ success: true, message: 'Visit tracked' });
+        console.log(`New visit tracked - IP: ${ip}, Website: ${website}, Type: ${visitType}, Session: ${session.sessionId}, VPN: ${vpnData.isVpn}, Computer ID: ${computerId}`);
+        res.status(200).json({ 
+            success: true, 
+            message: 'Visit tracked',
+            sessionId: session.sessionId,
+            visitType: visitType,
+            isFirstVisit: isNewSession
+        });
     } catch (error) {
         console.error('Error tracking visit:', error);
         
@@ -795,6 +988,119 @@ app.get('/api/ip-analytics', async (req, res) => {
         res.status(500).json({ 
             success: false, 
             message: 'Error fetching IP analytics' 
+        });
+    }
+});
+
+// Get session information
+app.get('/api/session/:sessionId', async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        
+        const session = await Session.findOne({ sessionId: sessionId });
+        
+        if (!session) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Session not found' 
+            });
+        }
+        
+        res.json({
+            success: true,
+            session: {
+                sessionId: session.sessionId,
+                ip: session.ip,
+                website: session.website,
+                computerId: session.computerId,
+                firstVisit: session.firstVisit,
+                lastActivity: session.lastActivity,
+                visitCount: session.visitCount,
+                referer: session.referer,
+                userAgent: session.userAgent,
+                expiresAt: session.expiresAt
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching session:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error fetching session data' 
+        });
+    }
+});
+
+// Get visit type statistics
+app.get('/api/visit-stats', async (req, res) => {
+    try {
+        const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+        const visitStats = await Visit.aggregate([
+            { $match: { timestamp: { $gte: last24Hours } } },
+            {
+                $group: {
+                    _id: null,
+                    totalVisits: { $sum: 1 },
+                    externalVisits: { $sum: { $cond: [{ $eq: ['$visitType', 'external'] }, 1, 0] } },
+                    directVisits: { $sum: { $cond: [{ $eq: ['$visitType', 'direct'] }, 1, 0] } },
+                    internalVisits: { $sum: { $cond: [{ $eq: ['$visitType', 'internal'] }, 1, 0] } },
+                    firstVisits: { $sum: { $cond: ['$isFirstVisit', 1, 0] } },
+                    uniqueSessions: { $addToSet: '$sessionId' },
+                    uniqueIPs: { $addToSet: '$ip' }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    totalVisits: 1,
+                    externalVisits: 1,
+                    directVisits: 1,
+                    internalVisits: 1,
+                    firstVisits: 1,
+                    uniqueSessions: { $size: '$uniqueSessions' },
+                    uniqueIPs: { $size: '$uniqueIPs' },
+                    externalPercentage: { $multiply: [{ $divide: ['$externalVisits', '$totalVisits'] }, 100] },
+                    directPercentage: { $multiply: [{ $divide: ['$directVisits', '$totalVisits'] }, 100] },
+                    internalPercentage: { $multiply: [{ $divide: ['$internalVisits', '$totalVisits'] }, 100] }
+                }
+            }
+        ]);
+
+        // Get top referrers
+        const topReferrers = await Visit.aggregate([
+            { $match: { timestamp: { $gte: last24Hours }, referer: { $exists: true, $ne: null } } },
+            {
+                $group: {
+                    _id: '$referer',
+                    count: { $sum: 1 },
+                    visitType: { $first: '$visitType' }
+                }
+            },
+            { $sort: { count: -1 } },
+            { $limit: 10 }
+        ]);
+
+        res.json({
+            success: true,
+            stats: visitStats[0] || {
+                totalVisits: 0,
+                externalVisits: 0,
+                directVisits: 0,
+                internalVisits: 0,
+                firstVisits: 0,
+                uniqueSessions: 0,
+                uniqueIPs: 0,
+                externalPercentage: 0,
+                directPercentage: 0,
+                internalPercentage: 0
+            },
+            topReferrers
+        });
+    } catch (error) {
+        console.error('Error fetching visit stats:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error fetching visit statistics' 
         });
     }
 });

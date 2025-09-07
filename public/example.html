@@ -3,24 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IP Tracker Implementation Example</title>
-    
-    <!-- IP Tracker Configuration -->
-    <script>
-        window.IPTrackerConfig = {
-            trackingCode: 'ip_your_user_id_timestamp_random', // Replace with your actual tracking code
-            website: 'yourdomain.com', // Replace with your domain
-            enableRealTime: true,
-            enableVPNDetection: true,
-            enableDeviceFingerprinting: true,
-            enableBehavioralTracking: true,
-            privacyMode: 'standard'
-        };
-    </script>
-    
-    <!-- IP Tracker Script -->
-    <script src="https://yourdomain.com/tracking-script.js"></script>
-    
+    <title>IP Tracking Example - Enhanced Version</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -30,199 +13,242 @@
             line-height: 1.6;
         }
         .header {
-            background: #f0f0f0;
+            background: #f4f4f4;
             padding: 20px;
             border-radius: 8px;
             margin-bottom: 20px;
         }
-        .code-block {
-            background: #f4f4f4;
-            padding: 15px;
-            border-radius: 5px;
-            font-family: monospace;
-            white-space: pre-wrap;
-            margin: 15px 0;
-            border-left: 4px solid #007cba;
+        .section {
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
         }
-        .warning {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 15px 0;
-        }
-        .success {
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 15px 0;
-        }
-        button {
-            background: #007cba;
+        .button {
+            background: #007bff;
             color: white;
-            border: none;
             padding: 10px 20px;
-            border-radius: 5px;
+            border: none;
+            border-radius: 4px;
             cursor: pointer;
             margin: 5px;
         }
-        button:hover {
-            background: #005a87;
+        .button:hover {
+            background: #0056b3;
+        }
+        .info {
+            background: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .code {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: monospace;
+            overflow-x: auto;
+        }
+        .tracking-info {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🔍 IP Tracker Implementation Example</h1>
-        <p>This page demonstrates how to implement the IP Tracker script on your website.</p>
+        <h1>🔍 Enhanced IP Tracking System</h1>
+        <p>This page demonstrates the new session-based tracking system that prevents duplicate counting from page refreshes.</p>
     </div>
 
-    <h2>📋 Implementation Steps</h2>
-    
-    <h3>1. Basic Implementation</h3>
-    <p>Add this code to your HTML <code>&lt;head&gt;</code> section:</p>
-    
-    <div class="code-block">&lt;!-- IP Tracker Configuration --&gt;
-&lt;script&gt;
-    window.IPTrackerConfig = {
-        trackingCode: 'ip_your_user_id_timestamp_random',
-        website: 'yourdomain.com',
-        enableRealTime: true,
-        enableVPNDetection: true,
-        enableDeviceFingerprinting: true,
-        enableBehavioralTracking: true,
-        privacyMode: 'standard'
-    };
-&lt;/script&gt;
+    <div class="section">
+        <h2>📊 How the New System Works</h2>
+        
+        <div class="info">
+            <h3>✅ What Gets Tracked:</h3>
+            <ul>
+                <li><strong>External visits:</strong> From Google, social media, other websites</li>
+                <li><strong>Direct visits:</strong> Typed URLs, bookmarks (no referrer)</li>
+                <li><strong>New sessions:</strong> First visit from a user</li>
+            </ul>
+        </div>
 
-&lt;!-- IP Tracker Script --&gt;
-&lt;script src="https://yourdomain.com/tracking-script.js"&gt;&lt;/script&gt;</div>
-
-    <h3>2. Configuration Options</h3>
-    <ul>
-        <li><strong>trackingCode</strong>: Your unique tracking code from the dashboard</li>
-        <li><strong>website</strong>: Your website domain</li>
-        <li><strong>enableRealTime</strong>: Enable real-time tracking and heartbeats</li>
-        <li><strong>enableVPNDetection</strong>: Enable VPN and proxy detection</li>
-        <li><strong>enableDeviceFingerprinting</strong>: Enable device fingerprinting</li>
-        <li><strong>enableBehavioralTracking</strong>: Track user behavior and interactions</li>
-        <li><strong>privacyMode</strong>: 'standard', 'enhanced', or 'minimal'</li>
-    </ul>
-
-    <h3>3. Advanced Usage</h3>
-    <p>You can also use the IP Tracker API programmatically:</p>
-    
-    <div class="code-block">// Track custom events
-IPTracker.trackEvent('button_click', { buttonId: 'signup', page: 'homepage' });
-
-// Get current tracking data
-const data = IPTracker.getData();
-console.log('Current tracking data:', data);
-
-// Manually track something
-IPTracker.track({ customField: 'customValue' });</div>
-
-    <h2>🧪 Test the Tracking</h2>
-    <p>Click the buttons below to test different tracking features:</p>
-    
-    <button onclick="testCustomEvent()">Track Custom Event</button>
-    <button onclick="testManualTracking()">Manual Tracking</button>
-    <button onclick="showTrackingData()">Show Current Data</button>
-    <button onclick="testFormInteraction()">Test Form Interaction</button>
-
-    <h2>📱 Responsive Implementation</h2>
-    <p>For mobile-first websites, the script automatically adapts and tracks:</p>
-    <ul>
-        <li>Touch events and gestures</li>
-        <li>Mobile-specific device information</li>
-        <li>Responsive viewport changes</li>
-        <li>Mobile browser capabilities</li>
-    </ul>
-
-    <h2>🔒 Privacy and Compliance</h2>
-    <div class="warning">
-        <strong>Important:</strong> Make sure to comply with privacy laws (GDPR, CCPA, etc.) and inform users about tracking.
-    </div>
-    
-    <p>The script supports different privacy modes:</p>
-    <ul>
-        <li><strong>minimal</strong>: Basic IP tracking only</li>
-        <li><strong>standard</strong>: Standard tracking with device fingerprinting</li>
-        <li><strong>enhanced</strong>: Full tracking with behavioral analysis</li>
-    </ul>
-
-    <h2>📊 Dashboard Integration</h2>
-    <p>Once implemented, you'll see real-time data in your IP Tracker dashboard:</p>
-    <ul>
-        <li>Visitor locations on an interactive map</li>
-        <li>VPN and proxy detection alerts</li>
-        <li>Device and browser analytics</li>
-        <li>Behavioral patterns and fraud detection</li>
-        <li>Real-time visitor monitoring</li>
-    </ul>
-
-    <h2>🚀 Performance Optimization</h2>
-    <p>The script is optimized for performance:</p>
-    <ul>
-        <li>Asynchronous data collection</li>
-        <li>Throttled event handling</li>
-        <li>Efficient data compression</li>
-        <li>Minimal impact on page load time</li>
-    </ul>
-
-    <div class="success">
-        <strong>Success!</strong> If you see "IP Tracker: Initialized successfully" in the console, the tracking is working correctly.
+        <div class="warning">
+            <h3>❌ What Gets Ignored:</h3>
+            <ul>
+                <li><strong>Page refreshes:</strong> F5, Ctrl+R, browser refresh</li>
+                <li><strong>Internal navigation:</strong> Links within the same website</li>
+                <li><strong>Same session visits:</strong> Multiple pages within 30 minutes</li>
+            </ul>
+        </div>
     </div>
 
-    <h2>📞 Support</h2>
-    <p>For technical support or questions about implementation, contact your IP Tracker administrator.</p>
+    <div class="section">
+        <h2>🧪 Testing the Tracking System</h2>
+        
+        <div class="tracking-info">
+            <h3>Current Session Info:</h3>
+            <div id="sessionInfo">Loading...</div>
+        </div>
 
+        <button class="button" onclick="testTracking()">🔄 Test Manual Tracking</button>
+        <button class="button" onclick="showSessionInfo()">📋 Show Session Details</button>
+        <button class="button" onclick="simulateExternalVisit()">🌐 Simulate External Visit</button>
+        <button class="button" onclick="clearSession()">🗑️ Clear Session (New User)</button>
+        
+        <div id="testResults"></div>
+    </div>
+
+    <div class="section">
+        <h2>🔗 Test Internal Navigation</h2>
+        <p>Click these links to test internal navigation (should NOT be tracked):</p>
+        <a href="#section1" class="button">Go to Section 1</a>
+        <a href="#section2" class="button">Go to Section 2</a>
+        <a href="?test=internal" class="button">Add Query Parameter</a>
+        
+        <div id="section1" style="margin-top: 50px;">
+            <h3>Section 1</h3>
+            <p>This is section 1. Navigation here should not trigger new tracking.</p>
+        </div>
+        
+        <div id="section2" style="margin-top: 50px;">
+            <h3>Section 2</h3>
+            <p>This is section 2. Navigation here should not trigger new tracking.</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📝 Implementation Guide</h2>
+        
+        <h3>1. Include the Tracking Script:</h3>
+        <div class="code">
+&lt;script src="http://your-server.com/tracking-script.js"&gt;&lt;/script&gt;
+        </div>
+
+        <h3>2. Update Server URL:</h3>
+        <div class="code">
+// In tracking-script.js, change this line:
+const TRACKING_SERVER = 'http://your-server.com:5000';
+        </div>
+
+        <h3>3. Manual Tracking (Optional):</h3>
+        <div class="code">
+// Track manually if needed
+window.IPTracker.track();
+
+// Check if should track
+if (window.IPTracker.shouldTrack()) {
+    window.IPTracker.track();
+}
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>🎯 Expected Behavior</h2>
+        
+        <div class="success">
+            <h3>First Visit (New Session):</h3>
+            <p>✅ <strong>Tracked</strong> - Creates new session and records visit</p>
+        </div>
+
+        <div class="warning">
+            <h3>Page Refresh (F5, Ctrl+R):</h3>
+            <p>❌ <strong>Not Tracked</strong> - Same session, internal action</p>
+        </div>
+
+        <div class="warning">
+            <h3>Internal Link Click:</h3>
+            <p>❌ <strong>Not Tracked</strong> - Same domain navigation</p>
+        </div>
+
+        <div class="success">
+            <h3>External Link Visit:</h3>
+            <p>✅ <strong>Tracked</strong> - Different referrer domain</p>
+        </div>
+
+        <div class="success">
+            <h3>Return After 30+ Minutes:</h3>
+            <p>✅ <strong>Tracked</strong> - New session (old one expired)</p>
+        </div>
+    </div>
+
+    <!-- Include the tracking script -->
+    <script src="tracking-script.js"></script>
+    
     <script>
         // Test functions
-        function testCustomEvent() {
-            IPTracker.trackEvent('test_button_click', {
-                button: 'custom_event_test',
-                timestamp: new Date().toISOString(),
-                page: window.location.pathname
-            });
-            alert('Custom event tracked! Check the console for details.');
-        }
-
-        function testManualTracking() {
-            IPTracker.track({
-                type: 'manual_test',
-                testData: 'This is a manual tracking test',
-                timestamp: new Date().toISOString()
-            });
-            alert('Manual tracking test sent!');
-        }
-
-        function showTrackingData() {
-            const data = IPTracker.getData();
-            console.log('Current IP Tracker Data:', data);
-            alert('Check the console for current tracking data!');
-        }
-
-        function testFormInteraction() {
-            // Create a test form interaction
-            const testEvent = new Event('input');
-            document.dispatchEvent(testEvent);
-            alert('Form interaction test completed!');
-        }
-
-        // Show initialization status
-        window.addEventListener('load', () => {
+        function testTracking() {
+            const results = document.getElementById('testResults');
+            results.innerHTML = '<div class="info">Testing manual tracking...</div>';
+            
             if (window.IPTracker) {
-                console.log('✅ IP Tracker is ready and working!');
-                console.log('Session ID:', IPTracker.getSessionId());
-                console.log('Computer ID:', IPTracker.getComputerId());
+                window.IPTracker.track();
+                results.innerHTML = '<div class="success">✅ Manual tracking triggered! Check console for details.</div>';
             } else {
-                console.error('❌ IP Tracker failed to initialize');
+                results.innerHTML = '<div class="warning">❌ Tracking script not loaded!</div>';
             }
-        });
+        }
+
+        function showSessionInfo() {
+            const sessionInfo = document.getElementById('sessionInfo');
+            if (window.IPTracker) {
+                const session = window.IPTracker.getSession();
+                const data = window.IPTracker.collectData();
+                
+                sessionInfo.innerHTML = `
+                    <strong>Session ID:</strong> ${session.sessionId}<br>
+                    <strong>Visit Count:</strong> ${session.visitCount}<br>
+                    <strong>Created:</strong> ${new Date(session.createdAt).toLocaleString()}<br>
+                    <strong>Computer ID:</strong> ${data.computerId}<br>
+                    <strong>Referrer:</strong> ${data.referer || 'None (Direct visit)'}<br>
+                    <strong>Should Track:</strong> ${window.IPTracker.shouldTrack() ? 'Yes' : 'No'}
+                `;
+            } else {
+                sessionInfo.innerHTML = '<div class="warning">Tracking script not loaded!</div>';
+            }
+        }
+
+        function simulateExternalVisit() {
+            // Simulate coming from Google
+            Object.defineProperty(document, 'referrer', {
+                value: 'https://www.google.com/search?q=test',
+                writable: false
+            });
+            
+            const results = document.getElementById('testResults');
+            results.innerHTML = '<div class="info">Simulated external referrer. Refresh page to test external visit tracking.</div>';
+        }
+
+        function clearSession() {
+            localStorage.removeItem('ip_tracking_session');
+            localStorage.removeItem('ip_tracking_computer_id');
+            
+            const results = document.getElementById('testResults');
+            results.innerHTML = '<div class="success">✅ Session cleared! Next visit will be treated as new user.</div>';
+            
+            // Update session info
+            setTimeout(showSessionInfo, 100);
+        }
+
+        // Show initial session info
+        setTimeout(showSessionInfo, 1000);
     </script>
 </body>
 </html>
