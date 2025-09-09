@@ -437,16 +437,50 @@ function startServer() {
                     };
                 }
                 throw new Error('IPAPI.CO failed');
+            },
+
+            async () => {
+                const controller = new AbortController();
+                setTimeout(() => controller.abort(), 3000);
+                
+                const response = await axios.get(`https://ipinfo.io/${ip}/json`, {
+                    signal: controller.signal,
+                    headers: { 'User-Agent': 'IP-Tracker/2.0' }
+                });
+                
+                if (response.data?.loc) {
+                    const [lat, lon] = response.data.loc.split(',');
+                    return {
+                        country: response.data.country || 'Unknown',
+                        region: response.data.region || 'Unknown',
+                        city: response.data.city || 'Unknown',
+                        district: 'Unknown',
+                        zip: response.data.postal || 'Unknown',
+                        timezone: response.data.timezone || 'Unknown',
+                        isp: response.data.org || 'Unknown',
+                        lat: parseFloat(lat) || 0,
+                        lon: parseFloat(lon) || 0,
+                        accuracy: 'low'
+                    };
+                }
+                throw new Error('IPINFO.IO failed');
             }
         ];
 
         try {
-            const result = await Promise.race(
-                services.map(service => service().catch(err => {
+            // Try all services sequentially until one succeeds
+            let result = null;
+            for (const service of services) {
+                try {
+                    result = await service();
+                    if (result && result.country && result.country !== 'Unknown') {
+                        break;
+                    }
+                } catch (err) {
                     console.log('Location service failed:', err.message);
-                    return null;
-                }))
-            );
+                    continue;
+                }
+            }
 
             const finalResult = result || {
                 country: 'Unknown', region: 'Unknown', city: 'Unknown',
@@ -711,6 +745,19 @@ function startServer() {
             const limit = Math.min(parseInt(req.query.limit) || 25, 50);
             const skip = (page - 1) * limit;
 
+            // Extract filter parameters
+            const riskLevel = req.query.riskLevel; // 'LOW', 'MEDIUM', 'HIGH'
+            const minFraudScore = parseInt(req.query.minFraudScore) || 0;
+            const maxFraudScore = parseInt(req.query.maxFraudScore) || 100;
+            const country = req.query.country;
+            const isp = req.query.isp;
+            const isVpn = req.query.isVpn === 'true';
+            const isProxy = req.query.isProxy === 'true';
+            const isTor = req.query.isTor === 'true';
+            const minVisits = parseInt(req.query.minVisits) || 0;
+            const maxVisits = parseInt(req.query.maxVisits) || 10000;
+            const search = req.query.search; // Search in IP, country, city, ISP
+
             let timeRange;
             switch (timeframe) {
                 case '1h': timeRange = new Date(Date.now() - 60 * 60 * 1000); break;
@@ -720,10 +767,20 @@ function startServer() {
                 default: timeRange = new Date(Date.now() - 24 * 60 * 60 * 1000);
             }
 
+            // Build match conditions for filtering
+            const matchConditions = { timestamp: { $gte: timeRange } };
+            
+            // Add security filters to the initial match
+            if (isVpn) matchConditions.isVpn = true;
+            if (isProxy) matchConditions.isProxy = true;
+            if (isTor) matchConditions.isTor = true;
+            if (country) matchConditions.country = new RegExp(country, 'i');
+            if (isp) matchConditions.isp = new RegExp(isp, 'i');
+
             // Run summary and detailed queries in parallel
             const [ipAnalytics, summary] = await Promise.all([
                 Visit.aggregate([
-                    { $match: { timestamp: { $gte: timeRange } } },
+                    { $match: matchConditions },
                     {
                         $group: {
                             _id: '$ip',
@@ -745,7 +802,10 @@ function startServer() {
                         $project: {
                             ip: '$_id',
                             totalVisits: 1,
+                            uniqueWebsites: 1,
                             websiteCount: { $size: '$uniqueWebsites' },
+                            firstVisit: 1,
+                            lastVisit: 1,
                             location: {
                                 country: '$country',
                                 city: '$city',
@@ -777,13 +837,41 @@ function startServer() {
                             }
                         }
                     },
+                    // Post-aggregation filters
+                    {
+                        $match: {
+                            ...(minFraudScore > 0 || maxFraudScore < 100 ? {
+                                fraudScore: {
+                                    $gte: minFraudScore,
+                                    $lte: maxFraudScore
+                                }
+                            } : {}),
+                            ...(minVisits > 0 || maxVisits < 10000 ? {
+                                totalVisits: {
+                                    $gte: minVisits,
+                                    $lte: maxVisits
+                                }
+                            } : {}),
+                            ...(riskLevel ? {
+                                'security.riskLevel': riskLevel.toUpperCase()
+                            } : {}),
+                            ...(search ? {
+                                $or: [
+                                    { ip: new RegExp(search, 'i') },
+                                    { 'location.country': new RegExp(search, 'i') },
+                                    { 'location.city': new RegExp(search, 'i') },
+                                    { isp: new RegExp(search, 'i') }
+                                ]
+                            } : {})
+                        }
+                    },
                     { $sort: { fraudScore: -1, totalVisits: -1 } },
                     { $skip: skip },
                     { $limit: limit }
                 ]),
 
                 Visit.aggregate([
-                    { $match: { timestamp: { $gte: timeRange } } },
+                    { $match: matchConditions },
                     {
                         $group: {
                             _id: null,
@@ -817,9 +905,92 @@ function startServer() {
                 ])
             ]);
 
+            // Calculate total count with same filters as main query
             const totalItems = await Visit.aggregate([
-                { $match: { timestamp: { $gte: timeRange } } },
-                { $group: { _id: '$ip' } },
+                { $match: matchConditions },
+                {
+                    $group: {
+                        _id: '$ip',
+                        totalVisits: { $sum: 1 },
+                        uniqueWebsites: { $addToSet: '$website' },
+                        country: { $first: '$country' },
+                        city: { $first: '$city' },
+                        isp: { $first: '$isp' },
+                        lat: { $first: '$lat' },
+                        lon: { $first: '$lon' },
+                        isVpn: { $first: '$isVpn' },
+                        isProxy: { $first: '$isProxy' },
+                        isTor: { $first: '$isTor' },
+                        firstVisit: { $min: '$timestamp' },
+                        lastVisit: { $max: '$timestamp' }
+                    }
+                },
+                {
+                    $project: {
+                        ip: '$_id',
+                        totalVisits: 1,
+                        uniqueWebsites: 1,
+                        websiteCount: { $size: '$uniqueWebsites' },
+                        firstVisit: 1,
+                        lastVisit: 1,
+                        location: {
+                            country: '$country',
+                            city: '$city',
+                            coordinates: { lat: '$lat', lon: '$lon' }
+                        },
+                        isp: 1,
+                        security: {
+                            isVpn: '$isVpn',
+                            isProxy: '$isProxy',
+                            isTor: '$isTor',
+                            riskLevel: {
+                                $switch: {
+                                    branches: [
+                                        { case: '$isTor', then: 'HIGH' },
+                                        { case: { $or: ['$isVpn', '$isProxy'] }, then: 'MEDIUM' }
+                                    ],
+                                    default: 'LOW'
+                                }
+                            }
+                        },
+                        fraudScore: {
+                            $add: [
+                                { $cond: ['$isTor', 50, 0] },
+                                { $cond: ['$isVpn', 25, 0] },
+                                { $cond: ['$isProxy', 20, 0] },
+                                { $cond: [{ $gt: ['$totalVisits', 10] }, 15, 0] },
+                                { $cond: [{ $gt: [{ $size: '$uniqueWebsites' }, 3] }, 10, 0] }
+                            ]
+                        }
+                    }
+                },
+                {
+                    $match: {
+                        ...(minFraudScore > 0 || maxFraudScore < 100 ? {
+                            fraudScore: {
+                                $gte: minFraudScore,
+                                $lte: maxFraudScore
+                            }
+                        } : {}),
+                        ...(minVisits > 0 || maxVisits < 10000 ? {
+                            totalVisits: {
+                                $gte: minVisits,
+                                $lte: maxVisits
+                            }
+                        } : {}),
+                        ...(riskLevel ? {
+                            'security.riskLevel': riskLevel.toUpperCase()
+                        } : {}),
+                        ...(search ? {
+                            $or: [
+                                { ip: new RegExp(search, 'i') },
+                                { 'location.country': new RegExp(search, 'i') },
+                                { 'location.city': new RegExp(search, 'i') },
+                                { isp: new RegExp(search, 'i') }
+                            ]
+                        } : {})
+                    }
+                },
                 { $count: 'total' }
             ]);
 
@@ -833,6 +1004,19 @@ function startServer() {
                     totalPages: Math.ceil(totalCount / limit),
                     totalItems: totalCount,
                     itemsPerPage: limit
+                },
+                filters: {
+                    riskLevel,
+                    minFraudScore,
+                    maxFraudScore,
+                    country,
+                    isp,
+                    isVpn,
+                    isProxy,
+                    isTor,
+                    minVisits,
+                    maxVisits,
+                    search
                 },
                 summary: summary[0] || {
                     totalVisits: 0, uniqueIPs: 0, uniqueWebsites: 0,
@@ -851,265 +1035,86 @@ function startServer() {
         }
     });
 
-    // Chunked fraud alerts endpoint
-    app.get('/api/fraud-alerts', apiLimiter, async (req, res) => {
+    // VPN Stats endpoint
+    app.get('/api/vpn-stats', apiLimiter, async (req, res) => {
         try {
-            const page = parseInt(req.query.page) || 1;
-            const limit = Math.min(parseInt(req.query.limit) || 20, 50);
-            const skip = (page - 1) * limit;
-            const minFraudScore = parseInt(req.query.minScore) || 50;
             const timeRange = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-            const fraudAlerts = await Visit.aggregate([
+            
+            const vpnStats = await Visit.aggregate([
                 { $match: { timestamp: { $gte: timeRange } } },
                 {
                     $group: {
-                        _id: '$ip',
-                        visits: { $sum: 1 },
-                        websites: { $addToSet: '$website' },
-                        isVpn: { $first: '$isVpn' },
-                        isProxy: { $first: '$isProxy' },
-                        isTor: { $first: '$isTor' },
-                        country: { $first: '$country' },
-                        city: { $first: '$city' },
-                        isp: { $first: '$isp' },
-                        userAgents: { $addToSet: '$userAgent' },
-                        firstSeen: { $min: '$timestamp' },
-                        lastSeen: { $max: '$timestamp' }
+                        _id: null,
+                        totalVisits: { $sum: 1 },
+                        vpnVisits: { $sum: { $cond: ['$isVpn', 1, 0] } },
+                        proxyVisits: { $sum: { $cond: ['$isProxy', 1, 0] } },
+                        torVisits: { $sum: { $cond: ['$isTor', 1, 0] } },
+                        uniqueVpnIPs: { $addToSet: { $cond: ['$isVpn', '$ip', null] } },
+                        uniqueProxyIPs: { $addToSet: { $cond: ['$isProxy', '$ip', null] } },
+                        uniqueTorIPs: { $addToSet: { $cond: ['$isTor', '$ip', null] } }
                     }
                 },
                 {
                     $project: {
-                        ip: '$_id',
-                        visits: 1,
-                        websiteCount: { $size: '$websites' },
-                        websites: 1,
-                        location: { country: '$country', city: '$city' },
-                        isp: 1,
-                        security: {
-                            isVpn: '$isVpn',
-                            isProxy: '$isProxy',
-                            isTor: '$isTor'
-                        },
-                        suspicious: {
-                            multipleUserAgents: { $gt: [{ $size: '$userAgents' }, 2] }
-                        },
-                        fraudScore: {
-                            $add: [
-                                { $cond: ['$isTor', 50, 0] },
-                                { $cond: ['$isVpn', 25, 0] },
-                                { $cond: ['$isProxy', 20, 0] },
-                                { $cond: [{ $gt: ['$visits', 20] }, 30, 0] },
-                                { $cond: [{ $gt: [{ $size: '$websites' }, 5] }, 25, 0] },
-                                { $cond: [{ $gt: [{ $size: '$userAgents' }, 2] }, 10, 0] }
-                            ]
-                        },
-                        activityPattern: {
-                            firstSeen: '$firstSeen',
-                            lastSeen: '$lastSeen'
-                        }
-                    }
-                },
-                {
-                    $match: {
-                        $or: [
-                            { fraudScore: { $gte: minFraudScore } },
-                            { visits: { $gte: 15 } },
-                            { websiteCount: { $gte: 4 } },
-                            { 'security.isTor': true }
-                        ]
-                    }
-                },
-                { $sort: { fraudScore: -1, visits: -1 } },
-                { $skip: skip },
-                { $limit: limit }
-            ]);
-
-            res.json({
-                success: true,
-                pagination: {
-                    currentPage: page,
-                    itemsPerPage: limit
-                },
-                fraudAlerts,
-                alertCount: fraudAlerts.length
-            });
-
-        } catch (error) {
-            console.error('Fraud alerts error:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Error fetching fraud alerts'
-            });
-        }
-    });
-
-    // Optimized website-specific endpoint
-    app.get('/api/website/:domain', apiLimiter, async (req, res) => {
-        try {
-            const { domain } = req.params;
-            const page = parseInt(req.query.page) || 1;
-            const limit = Math.min(parseInt(req.query.limit) || 50, 100);
-            const skip = (page - 1) * limit;
-            const timeRange = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-            const [visits, totalCount, summary] = await Promise.all([
-                Visit.find({ website: domain, timestamp: { $gte: timeRange } })
-                    .sort({ timestamp: -1 })
-                    .skip(skip)
-                    .limit(limit)
-                    .lean(),
-                
-                Visit.countDocuments({ website: domain, timestamp: { $gte: timeRange } }),
-                
-                Visit.aggregate([
-                    { $match: { website: domain, timestamp: { $gte: timeRange } } },
-                    {
-                        $group: {
-                            _id: null,
-                            totalVisits: { $sum: 1 },
-                            uniqueIPs: { $addToSet: '$ip' },
-                            vpnVisits: { $sum: { $cond: ['$isVpn', 1, 0] } },
-                            countries: { $addToSet: '$country' }
-                        }
-                    }
-                ])
-            ]);
-
-            res.json({
-                success: true,
-                domain,
-                pagination: {
-                    currentPage: page,
-                    totalPages: Math.ceil(totalCount / limit),
-                    totalItems: totalCount,
-                    itemsPerPage: limit
-                },
-                summary: summary[0] || { totalVisits: 0, uniqueIPs: 0, vpnVisits: 0, countries: 0 },
-                visits
-            });
-
-        } catch (error) {
-            console.error('Website data error:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Error fetching website data'
-            });
-        }
-    });
-
-    // Lightweight IP tracking endpoint
-    app.get('/api/track-ip', apiLimiter, async (req, res) => {
-        try {
-            const { ip } = req.query;
-            
-            if (!ip || !/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(ip)) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Valid IP address required'
-                });
-            }
-
-            const locationData = await getLocationData(ip);
-            
-            if (locationData.accuracy === 'none') {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Could not locate IP address'
-                });
-            }
-
-            res.json({
-                success: true,
-                ip,
-                ...locationData,
-                timestamp: new Date()
-            });
-
-        } catch (error) {
-            console.error('IP tracking error:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Error tracking IP'
-            });
-        }
-    });
-
-    // Batch export endpoint with streaming
-    app.get('/api/export-blocklist', apiLimiter, async (req, res) => {
-        try {
-            const timeRange = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-            const minVisits = parseInt(req.query.minVisits) || 10;
-            const minFraudScore = parseInt(req.query.minFraudScore) || 50;
-
-            res.setHeader('Content-Type', 'text/csv');
-            res.setHeader('Content-Disposition', 'attachment; filename=high-risk-ips.csv');
-            res.write('IP,Visits,Websites,FraudScore,Country,ISP,VPN,Proxy,Tor,Reason\n');
-
-            const cursor = Visit.aggregate([
-                { $match: { timestamp: { $gte: timeRange } } },
-                {
-                    $group: {
-                        _id: '$ip',
-                        visits: { $sum: 1 },
-                        websites: { $addToSet: '$website' },
-                        isVpn: { $first: '$isVpn' },
-                        isProxy: { $first: '$isProxy' },
-                        isTor: { $first: '$isTor' },
-                        country: { $first: '$country' },
-                        isp: { $first: '$isp' }
-                    }
-                },
-                {
-                    $project: {
-                        ip: '$_id',
-                        visits: 1,
-                        websiteCount: { $size: '$websites' },
-                        fraudScore: {
-                            $add: [
-                                { $cond: ['$isTor', 50, 0] },
-                                { $cond: ['$isVpn', 25, 0] },
-                                { $cond: ['$isProxy', 20, 0] },
-                                { $cond: [{ $gt: ['$visits', 20] }, 30, 0] },
-                                { $cond: [{ $gt: [{ $size: '$websites' }, 5] }, 25, 0] }
-                            ]
-                        },
-                        country: 1, isp: 1, isVpn: 1, isProxy: 1, isTor: 1
-                    }
-                },
-                {
-                    $match: {
-                        $or: [
-                            { visits: { $gte: minVisits } },
-                            { fraudScore: { $gte: minFraudScore } },
-                            { isTor: true }
-                        ]
+                        _id: 0,
+                        totalVisits: 1,
+                        vpnVisits: 1,
+                        proxyVisits: 1,
+                        torVisits: 1,
+                        uniqueVpnIPs: { $size: { $filter: { input: '$uniqueVpnIPs', cond: { $ne: ['$$this', null] } } } },
+                        uniqueProxyIPs: { $size: { $filter: { input: '$uniqueProxyIPs', cond: { $ne: ['$$this', null] } } } },
+                        uniqueTorIPs: { $size: { $filter: { input: '$uniqueTorIPs', cond: { $ne: ['$$this', null] } } } },
+                        vpnPercentage: { $multiply: [{ $divide: ['$vpnVisits', '$totalVisits'] }, 100] },
+                        proxyPercentage: { $multiply: [{ $divide: ['$proxyVisits', '$totalVisits'] }, 100] },
+                        torPercentage: { $multiply: [{ $divide: ['$torVisits', '$totalVisits'] }, 100] }
                     }
                 }
-            ]).cursor({ batchSize: 100 });
+            ]);
 
-            for await (const ip of cursor) {
-                const reasons = [];
-                if (ip.isTor) reasons.push('Tor');
-                if (ip.isVpn) reasons.push('VPN');
-                if (ip.isProxy) reasons.push('Proxy');
-                if (ip.visits >= 20) reasons.push('High Traffic');
-                if (ip.websiteCount >= 5) reasons.push('Multiple Sites');
+            const topVpnProviders = await Visit.aggregate([
+                { $match: { isVpn: true, vpnProvider: { $exists: true, $ne: null }, timestamp: { $gte: timeRange } } },
+                {
+                    $group: {
+                        _id: '$vpnProvider',
+                        count: { $sum: 1 },
+                        uniqueIPs: { $addToSet: '$ip' }
+                    }
+                },
+                {
+                    $project: {
+                        provider: '$_id',
+                        count: 1,
+                        uniqueIPs: { $size: '$uniqueIPs' }
+                    }
+                },
+                { $sort: { count: -1 } },
+                { $limit: 10 }
+            ]);
 
-                const line = `${ip.ip},${ip.visits},${ip.websiteCount},${ip.fraudScore},${ip.country || ''},${ip.isp || ''},${ip.isVpn},${ip.isProxy},${ip.isTor},"${reasons.join(', ')}"\n`;
-                res.write(line);
-            }
+            const result = {
+                success: true,
+                summary: vpnStats[0] || {
+                    totalVisits: 0,
+                    vpnVisits: 0,
+                    proxyVisits: 0,
+                    torVisits: 0,
+                    uniqueVpnIPs: 0,
+                    uniqueProxyIPs: 0,
+                    uniqueTorIPs: 0,
+                    vpnPercentage: 0,
+                    proxyPercentage: 0,
+                    torPercentage: 0
+                },
+                topVpnProviders: topVpnProviders
+            };
 
-            res.end();
-
+            res.json(result);
         } catch (error) {
-            console.error('Export error:', error);
-            if (!res.headersSent) {
-                res.status(500).json({
-                    success: false,
-                    message: 'Error generating export'
-                });
-            }
+            console.error('Error fetching VPN stats:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Error fetching VPN statistics'
+            });
         }
     });
 
