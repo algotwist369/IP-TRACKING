@@ -14,6 +14,14 @@
     const SESSION_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
     const MIN_TRACK_INTERVAL = 5 * 60 * 1000; // Minimum 5 minutes between tracks from same session
 
+    // Prevent self-tracking on tracker domains
+    const TRACKER_HOSTS = ['track.d0s369.co.in', 'localhost:5000', '127.0.0.1:5000'];
+    const currentHost = (location.host || '').toLowerCase();
+    if (TRACKER_HOSTS.some(h => currentHost.includes(h))) {
+        console.info('[IP-Tracker] Self-tracking prevented on tracker domain:', currentHost);
+        return;
+    }
+
     // Generate unique session ID
     function generateSessionId() {
         const timestamp = Date.now();

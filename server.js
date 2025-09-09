@@ -12,10 +12,11 @@ const helmet = require('helmet');
 const NodeCache = require('node-cache');
 require('dotenv').config();
 
-// Initialize cache (TTL: 5 minutes for location data, 30 minutes for VPN data)
-const locationCache = new NodeCache({ stdTTL: 300 });
-const vpnCache = new NodeCache({ stdTTL: 1800 });
-const sessionCache = new NodeCache({ stdTTL: 1800 });
+// Initialize cache with optimized TTL settings
+const locationCache = new NodeCache({ stdTTL: 600, checkperiod: 120 }); // 10 minutes, check every 2 minutes
+const vpnCache = new NodeCache({ stdTTL: 1800, checkperiod: 300 }); // 30 minutes, check every 5 minutes
+const sessionCache = new NodeCache({ stdTTL: 1800, checkperiod: 300 }); // 30 minutes, check every 5 minutes
+const apiCache = new NodeCache({ stdTTL: 60, checkperiod: 30 }); // 1 minute for API responses
 
 // Clustering for better performance
 if (cluster.isMaster && process.env.NODE_ENV === 'production') {
@@ -78,6 +79,28 @@ function startServer() {
     }));
     app.use(cors(corsOptions));
 
+    // Response caching middleware
+    const cacheMiddleware = (ttl = 60) => {
+        return (req, res, next) => {
+            const key = `cache_${req.originalUrl}_${JSON.stringify(req.query)}`;
+            const cached = apiCache.get(key);
+            
+            if (cached) {
+                res.set('X-Cache', 'HIT');
+                return res.json(cached);
+            }
+            
+            const originalSend = res.json;
+            res.json = function(data) {
+                apiCache.set(key, data, ttl);
+                res.set('X-Cache', 'MISS');
+                return originalSend.call(this, data);
+            };
+            
+            next();
+        };
+    };
+
     // Rate limiting - more aggressive for tracking endpoint
     const trackingLimiter = rateLimit({
         windowMs: 1 * 60 * 1000, // 1 minute
@@ -104,11 +127,17 @@ function startServer() {
     }));
     app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-    // Enhanced MongoDB connection with connection pooling
+    // Enhanced MongoDB connection with optimized connection pooling
     const connectDB = async () => {
         try {
-            await mongoose.connect(process.env.MONGO_URI);
-            console.log('MongoDB connected');
+            await mongoose.connect(process.env.MONGO_URI, {
+                maxPoolSize: 10, // Maintain up to 10 socket connections
+                serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
+                socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+                maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
+                minPoolSize: 5, // Maintain a minimum of 5 socket connections
+            });
+            console.log('MongoDB connected with optimized pooling');
         } catch (error) {
             console.error('MongoDB connection error:', error);
             process.exit(1);
@@ -672,6 +701,28 @@ function startServer() {
                 });
             }
 
+            // Prevent self-tracking: skip if request comes from tracker domain or website equals tracker domain
+            const trackerHosts = (process.env.TRACKER_HOSTS || 'track.d0s369.co.in,localhost:5000,127.0.0.1:5000')
+                .split(',')
+                .map(h => h.trim().toLowerCase())
+                .filter(Boolean);
+
+            const originHeader = (req.headers.origin || '').toLowerCase();
+            const refererHeader = (req.headers.referer || '').toLowerCase();
+            const websiteParam = (req.body.website || '').toLowerCase();
+
+            const isFromTracker = trackerHosts.some(host =>
+                originHeader.includes(host) || refererHeader.includes(host) || websiteParam.includes(host)
+            );
+
+            if (isFromTracker) {
+                return res.status(200).json({
+                    success: true,
+                    message: 'Self-tracking prevented',
+                    tracked: false
+                });
+            }
+
             const ip = getRealIP(req);
             const {
                 website, userAgent, referer, computerId, deviceFingerprint,
@@ -807,7 +858,7 @@ function startServer() {
     });
 
     // Chunked dashboard data endpoint
-    app.get('/api/dashboard', apiLimiter, async (req, res) => {
+    app.get('/api/dashboard', apiLimiter, cacheMiddleware(30), async (req, res) => {
         try {
             const page = parseInt(req.query.page) || 1;
             const limit = Math.min(parseInt(req.query.limit) || 50, 100); // Max 100 per page
@@ -908,7 +959,7 @@ function startServer() {
     });
 
     // Chunked comprehensive IP analytics
-    app.get('/api/ip-comprehensive', apiLimiter, async (req, res) => {
+    app.get('/api/ip-comprehensive', apiLimiter, cacheMiddleware(15), async (req, res) => {
         try {
             const timeframe = req.query.timeframe || '24h';
             const page = parseInt(req.query.page) || 1;
@@ -1211,7 +1262,7 @@ function startServer() {
     });
 
     // Map Data endpoint for visitor locations
-    app.get('/api/map-data', apiLimiter, async (req, res) => {
+    app.get('/api/map-data', apiLimiter, cacheMiddleware(30), async (req, res) => {
         try {
             const timeframe = req.query.timeframe || '24h';
             const website = req.query.website; // Optional website filter
@@ -1300,7 +1351,7 @@ function startServer() {
     });
 
     // Source Analytics endpoint
-    app.get('/api/source-analytics', apiLimiter, async (req, res) => {
+    app.get('/api/source-analytics', apiLimiter, cacheMiddleware(60), async (req, res) => {
         try {
             const timeframe = req.query.timeframe || '24h';
             let timeRange;
@@ -1399,7 +1450,7 @@ function startServer() {
     });
 
     // VPN Stats endpoint
-    app.get('/api/vpn-stats', apiLimiter, async (req, res) => {
+    app.get('/api/vpn-stats', apiLimiter, cacheMiddleware(60), async (req, res) => {
         try {
             const timeRange = new Date(Date.now() - 24 * 60 * 60 * 1000);
             
