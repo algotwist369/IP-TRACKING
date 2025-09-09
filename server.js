@@ -22,11 +22,11 @@ const apiCache = new NodeCache({ stdTTL: 60, checkperiod: 30 }); // 1 minute for
 if (cluster.isMaster && process.env.NODE_ENV === 'production') {
     const numCPUs = Math.min(os.cpus().length, 4); // Max 4 workers
     console.log(`Master ${process.pid} is running`);
-    
+
     for (let i = 0; i < numCPUs; i++) {
         cluster.fork();
     }
-    
+
     cluster.on('exit', (worker, code, signal) => {
         console.log(`Worker ${worker.process.pid} died`);
         cluster.fork();
@@ -43,7 +43,7 @@ function startServer() {
     const corsOptions = {
         origin: function (origin, callback) {
             // Allow requests from your domains or localhost
-            const allowedOrigins = process.env.ALLOWED_ORIGINS ? 
+            const allowedOrigins = process.env.ALLOWED_ORIGINS ?
                 process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:3000', 'http://localhost:5173', 'https://dostracker.ciphra.in'];
 
             if (!origin || allowedOrigins.includes(origin)) {
@@ -84,19 +84,19 @@ function startServer() {
         return (req, res, next) => {
             const key = `cache_${req.originalUrl}_${JSON.stringify(req.query)}`;
             const cached = apiCache.get(key);
-            
+
             if (cached) {
                 res.set('X-Cache', 'HIT');
                 return res.json(cached);
             }
-            
+
             const originalSend = res.json;
-            res.json = function(data) {
+            res.json = function (data) {
                 apiCache.set(key, data, ttl);
                 res.set('X-Cache', 'MISS');
                 return originalSend.call(this, data);
             };
-            
+
             next();
         };
     };
@@ -119,7 +119,7 @@ function startServer() {
     });
 
     // Body parsing with size limits
-    app.use(express.json({ 
+    app.use(express.json({
         limit: '1mb',
         verify: (req, res, buf) => {
             req.rawBody = buf;
@@ -162,14 +162,14 @@ function startServer() {
         lat: Number,
         lon: Number,
         accuracy: { type: String, enum: ['high', 'medium', 'low', 'none'], default: 'none' },
-        
+
         // VPN and Proxy Detection
         isVpn: { type: Boolean, default: false, index: true },
         isProxy: { type: Boolean, default: false },
         isTor: { type: Boolean, default: false },
         vpnProvider: String,
         proxyType: String,
-        
+
         // Device fingerprinting
         computerId: { type: String, index: true },
         deviceFingerprint: String,
@@ -181,12 +181,12 @@ function startServer() {
         maxTouchPoints: Number,
         cookieEnabled: Boolean,
         doNotTrack: { type: Boolean, default: false },
-        
+
         // Session tracking
         sessionId: { type: String, required: true, index: true },
         visitType: { type: String, enum: ['external', 'direct', 'internal'], default: 'direct' },
         isFirstVisit: { type: Boolean, default: true },
-        
+
         // Enhanced source tracking
         sourceType: { type: String, enum: ['direct', 'search', 'social', 'external', 'internal', 'unknown'], default: 'direct', index: true },
         sourceName: String,
@@ -195,7 +195,7 @@ function startServer() {
         browserVersion: String,
         os: String,
         refererDomain: String,
-        
+
         timestamp: { type: Date, default: Date.now, index: true }
     });
 
@@ -237,10 +237,10 @@ function startServer() {
         if (forwarded) {
             return forwarded.split(',')[0].trim();
         }
-        return req.headers['x-real-ip'] || 
-               req.connection.remoteAddress || 
-               req.socket.remoteAddress || 
-               '127.0.0.1';
+        return req.headers['x-real-ip'] ||
+            req.connection.remoteAddress ||
+            req.socket.remoteAddress ||
+            '127.0.0.1';
     }
 
     function generateSessionId(ip, computerId, deviceFingerprint) {
@@ -251,11 +251,11 @@ function startServer() {
 
     function getVisitType(referer, website) {
         if (!referer) return 'direct';
-        
+
         try {
             const refererUrl = new URL(referer);
             const websiteUrl = new URL(website.startsWith('http') ? website : `https://${website}`);
-            
+
             return refererUrl.hostname === websiteUrl.hostname ? 'internal' : 'external';
         } catch (error) {
             return 'direct';
@@ -264,12 +264,12 @@ function startServer() {
 
     function isExternalTraffic(referer) {
         if (!referer) return false;
-        
+
         try {
             const hostname = new URL(referer).hostname.toLowerCase();
             const searchEngines = ['google', 'bing', 'yahoo', 'duckduckgo', 'baidu', 'yandex'];
             const socialMedia = ['facebook', 'twitter', 'linkedin', 'instagram', 'youtube', 'tiktok', 'pinterest', 'reddit'];
-            
+
             return [...searchEngines, ...socialMedia].some(site => hostname.includes(site));
         } catch (error) {
             return false;
@@ -278,13 +278,13 @@ function startServer() {
 
     function detectBrowserInfo(userAgent) {
         if (!userAgent) return { browser: 'Unknown', browserVersion: 'Unknown', os: 'Unknown' };
-        
+
         const ua = userAgent.toLowerCase();
-        
+
         // Browser detection
         let browser = 'Unknown';
         let browserVersion = 'Unknown';
-        
+
         if (ua.includes('chrome') && !ua.includes('edg')) {
             browser = 'Chrome';
             const match = ua.match(/chrome\/(\d+\.\d+)/);
@@ -306,7 +306,7 @@ function startServer() {
             const match = ua.match(/(?:opera|opr)\/(\d+\.\d+)/);
             if (match) browserVersion = match[1];
         }
-        
+
         // OS detection
         let os = 'Unknown';
         if (ua.includes('windows')) {
@@ -320,13 +320,13 @@ function startServer() {
         } else if (ua.includes('ios') || ua.includes('iphone') || ua.includes('ipad')) {
             os = 'iOS';
         }
-        
+
         return { browser, browserVersion, os };
     }
 
     function getDetailedSourceInfo(referer, userAgent) {
         const browserInfo = detectBrowserInfo(userAgent);
-        
+
         if (!referer) {
             return {
                 sourceType: 'direct',
@@ -338,11 +338,11 @@ function startServer() {
                 refererDomain: null
             };
         }
-        
+
         try {
             const refererUrl = new URL(referer);
             const refererDomain = refererUrl.hostname.toLowerCase();
-            
+
             // Search engines
             const searchEngines = {
                 'google': 'Google',
@@ -352,7 +352,7 @@ function startServer() {
                 'baidu': 'Baidu',
                 'yandex': 'Yandex'
             };
-            
+
             // Social media
             const socialMedia = {
                 'facebook': 'Facebook',
@@ -364,7 +364,7 @@ function startServer() {
                 'pinterest': 'Pinterest',
                 'reddit': 'Reddit'
             };
-            
+
             // Check for search engines
             for (const [key, name] of Object.entries(searchEngines)) {
                 if (refererDomain.includes(key)) {
@@ -379,7 +379,7 @@ function startServer() {
                     };
                 }
             }
-            
+
             // Check for social media
             for (const [key, name] of Object.entries(socialMedia)) {
                 if (refererDomain.includes(key)) {
@@ -394,7 +394,7 @@ function startServer() {
                     };
                 }
             }
-            
+
             // Other external sources
             return {
                 sourceType: 'external',
@@ -405,7 +405,7 @@ function startServer() {
                 os: browserInfo.os,
                 refererDomain: refererDomain
             };
-            
+
         } catch (error) {
             return {
                 sourceType: 'unknown',
@@ -423,18 +423,18 @@ function startServer() {
     async function getOrCreateSession(ip, website, computerId, deviceFingerprint, referer, userAgent) {
         const cacheKey = `session_${ip}_${website}_${computerId}`;
         let session = sessionCache.get(cacheKey);
-        
+
         if (session && new Date(session.expiresAt) > new Date()) {
             session.lastActivity = new Date();
             session.expiresAt = new Date(Date.now() + 30 * 60 * 1000);
             sessionCache.set(cacheKey, session, 1800);
-            
+
             // Update in database asynchronously
             Session.updateOne(
                 { sessionId: session.sessionId },
                 { lastActivity: session.lastActivity, expiresAt: session.expiresAt }
             ).catch(err => console.error('Error updating session:', err));
-            
+
             return { session, isNewSession: false };
         }
 
@@ -458,11 +458,11 @@ function startServer() {
                 referer, userAgent, visitCount: 0,
                 expiresAt: new Date(Date.now() + 30 * 60 * 1000)
             });
-            
+
             await session.save();
             sessionCache.set(cacheKey, session, 1800);
             return { session, isNewSession: true };
-            
+
         } catch (error) {
             console.error('Error managing session:', error);
             const fallbackSessionId = generateSessionId(ip, computerId, deviceFingerprint);
@@ -485,12 +485,12 @@ function startServer() {
                 try {
                     const controller = new AbortController();
                     setTimeout(() => controller.abort(), 3000);
-                    
+
                     const response = await axios.get(`https://v2.api.iphub.info/guest/ip/${ip}`, {
                         signal: controller.signal,
                         headers: { 'User-Agent': 'IP-Tracker/2.0' }
                     });
-                    
+
                     if (response.data?.block !== undefined) {
                         return {
                             isVpn: response.data.block === 1,
@@ -509,24 +509,24 @@ function startServer() {
                 try {
                     const controller = new AbortController();
                     setTimeout(() => controller.abort(), 2000);
-                    
+
                     const response = await axios.get(`http://ip-api.com/json/${ip}?fields=isp,org`, {
                         signal: controller.signal
                     });
-                    
+
                     if (response.data?.status === 'success') {
                         const isp = (response.data.isp || '').toLowerCase();
                         const org = (response.data.org || '').toLowerCase();
-                        
+
                         const vpnKeywords = [
                             'vpn', 'proxy', 'tor', 'nord', 'express', 'surfshark', 'cyberghost',
                             'private internet access', 'pia', 'mullvad', 'windscribe', 'proton'
                         ];
-                        
-                        const isVpn = vpnKeywords.some(keyword => 
+
+                        const isVpn = vpnKeywords.some(keyword =>
                             isp.includes(keyword) || org.includes(keyword)
                         );
-                        
+
                         return {
                             isVpn,
                             isProxy: isVpn,
@@ -545,15 +545,15 @@ function startServer() {
             const result = await Promise.race(
                 services.map(service => service().catch(() => null))
             );
-            
+
             const finalResult = result || {
                 isVpn: false, isProxy: false, isTor: false,
                 vpnProvider: null, proxyType: null
             };
-            
+
             vpnCache.set(cacheKey, finalResult, 1800); // Cache for 30 minutes
             return finalResult;
-            
+
         } catch (error) {
             const defaultResult = {
                 isVpn: false, isProxy: false, isTor: false,
@@ -574,12 +574,12 @@ function startServer() {
             async () => {
                 const controller = new AbortController();
                 setTimeout(() => controller.abort(), 3000);
-                
+
                 const response = await axios.get(
                     `http://ip-api.com/json/${ip}?fields=status,country,regionName,city,timezone,isp,lat,lon,zip,district`,
                     { signal: controller.signal }
                 );
-                
+
                 if (response.data.status === 'success') {
                     return {
                         country: response.data.country,
@@ -600,12 +600,12 @@ function startServer() {
             async () => {
                 const controller = new AbortController();
                 setTimeout(() => controller.abort(), 3000);
-                
+
                 const response = await axios.get(`https://ipapi.co/${ip}/json/`, {
                     signal: controller.signal,
                     headers: { 'User-Agent': 'IP-Tracker/2.0' }
                 });
-                
+
                 if (response.data?.latitude && response.data?.longitude) {
                     return {
                         country: response.data.country_name,
@@ -626,12 +626,12 @@ function startServer() {
             async () => {
                 const controller = new AbortController();
                 setTimeout(() => controller.abort(), 3000);
-                
+
                 const response = await axios.get(`https://ipinfo.io/${ip}/json`, {
                     signal: controller.signal,
                     headers: { 'User-Agent': 'IP-Tracker/2.0' }
                 });
-                
+
                 if (response.data?.loc) {
                     const [lat, lon] = response.data.loc.split(',');
                     return {
@@ -767,7 +767,7 @@ function startServer() {
                         website: website
                     }).sort({ timestamp: -1 }).lean();
 
-                    const timeSinceLastVisit = lastVisit ? 
+                    const timeSinceLastVisit = lastVisit ?
                         Date.now() - lastVisit.timestamp.getTime() : Infinity;
 
                     if (timeSinceLastVisit >= 5 * 60 * 1000) {
@@ -814,7 +814,7 @@ function startServer() {
                 new Visit(visitData).save(),
                 Session.updateOne(
                     { sessionId: session.sessionId },
-                    { 
+                    {
                         $inc: { visitCount: 1 },
                         $set: { lastActivity: new Date() }
                     }
@@ -872,7 +872,7 @@ function startServer() {
                     .limit(limit)
                     .skip(skip)
                     .lean(),
-                
+
                 Visit.aggregate([
                     { $match: { timestamp: { $gte: last24Hours } } },
                     {
@@ -991,7 +991,7 @@ function startServer() {
 
             // Build match conditions for filtering
             const matchConditions = { timestamp: { $gte: timeRange } };
-            
+
             // Add security filters to the initial match
             if (isVpn) matchConditions.isVpn = true;
             if (isProxy) matchConditions.isProxy = true;
@@ -1017,6 +1017,13 @@ function startServer() {
                             isVpn: { $first: '$isVpn' },
                             isProxy: { $first: '$isProxy' },
                             isTor: { $first: '$isTor' },
+                            sourceType: { $first: '$sourceType' },
+                            sourceName: { $first: '$sourceName' },
+                            sourceCategory: { $first: '$sourceCategory' },
+                            browser: { $first: '$browser' },
+                            browserVersion: { $first: '$browserVersion' },
+                            os: { $first: '$os' },
+                            refererDomain: { $first: '$refererDomain' },
                             firstVisit: { $min: '$timestamp' },
                             lastVisit: { $max: '$timestamp' }
                         }
@@ -1035,6 +1042,15 @@ function startServer() {
                                 coordinates: { lat: '$lat', lon: '$lon' }
                             },
                             isp: 1,
+                            source: {
+                                type: '$sourceType',
+                                name: '$sourceName',
+                                category: '$sourceCategory',
+                                browser: '$browser',
+                                browserVersion: '$browserVersion',
+                                os: '$os',
+                                refererDomain: '$refererDomain'
+                            },
                             security: {
                                 isVpn: '$isVpn',
                                 isProxy: '$isProxy',
@@ -1145,6 +1161,13 @@ function startServer() {
                         isVpn: { $first: '$isVpn' },
                         isProxy: { $first: '$isProxy' },
                         isTor: { $first: '$isTor' },
+                        sourceType: { $first: '$sourceType' },
+                        sourceName: { $first: '$sourceName' },
+                        sourceCategory: { $first: '$sourceCategory' },
+                        browser: { $first: '$browser' },
+                        browserVersion: { $first: '$browserVersion' },
+                        os: { $first: '$os' },
+                        refererDomain: { $first: '$refererDomain' },
                         firstVisit: { $min: '$timestamp' },
                         lastVisit: { $max: '$timestamp' }
                     }
@@ -1163,6 +1186,15 @@ function startServer() {
                             coordinates: { lat: '$lat', lon: '$lon' }
                         },
                         isp: 1,
+                        source: {
+                            type: '$sourceType',
+                            name: '$sourceName',
+                            category: '$sourceCategory',
+                            browser: '$browser',
+                            browserVersion: '$browserVersion',
+                            os: '$os',
+                            refererDomain: '$refererDomain'
+                        },
                         security: {
                             isVpn: '$isVpn',
                             isProxy: '$isProxy',
@@ -1267,7 +1299,7 @@ function startServer() {
             const timeframe = req.query.timeframe || '24h';
             const website = req.query.website; // Optional website filter
             let timeRange;
-            
+
             switch (timeframe) {
                 case '1h': timeRange = new Date(Date.now() - 60 * 60 * 1000); break;
                 case '6h': timeRange = new Date(Date.now() - 6 * 60 * 60 * 1000); break;
@@ -1276,12 +1308,12 @@ function startServer() {
                 default: timeRange = new Date(Date.now() - 24 * 60 * 60 * 1000);
             }
 
-            const matchConditions = { 
+            const matchConditions = {
                 timestamp: { $gte: timeRange },
                 lat: { $exists: true, $ne: null, $ne: 0 },
                 lon: { $exists: true, $ne: null, $ne: 0 }
             };
-            
+
             if (website) {
                 matchConditions.website = new RegExp(website, 'i');
             }
@@ -1453,7 +1485,7 @@ function startServer() {
     app.get('/api/vpn-stats', apiLimiter, cacheMiddleware(60), async (req, res) => {
         try {
             const timeRange = new Date(Date.now() - 24 * 60 * 60 * 1000);
-            
+
             const vpnStats = await Visit.aggregate([
                 { $match: { timestamp: { $gte: timeRange } } },
                 {
@@ -1545,7 +1577,7 @@ function startServer() {
                 session: sessionCache.getStats()
             }
         };
-        
+
         res.json(healthCheck);
     });
 
