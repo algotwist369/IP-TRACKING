@@ -921,12 +921,13 @@ function startServer() {
             const maxFraudScore = parseInt(req.query.maxFraudScore) || 100;
             const country = req.query.country;
             const isp = req.query.isp;
+            const website = req.query.website; // Filter by specific website
             const isVpn = req.query.isVpn === 'true';
             const isProxy = req.query.isProxy === 'true';
             const isTor = req.query.isTor === 'true';
             const minVisits = parseInt(req.query.minVisits) || 0;
             const maxVisits = parseInt(req.query.maxVisits) || 10000;
-            const search = req.query.search; // Search in IP, country, city, ISP
+            const search = req.query.search; // Search in IP, country, city, ISP, website
 
             let timeRange;
             switch (timeframe) {
@@ -946,6 +947,7 @@ function startServer() {
             if (isTor) matchConditions.isTor = true;
             if (country) matchConditions.country = new RegExp(country, 'i');
             if (isp) matchConditions.isp = new RegExp(isp, 'i');
+            if (website) matchConditions.website = new RegExp(website, 'i');
 
             // Run summary and detailed queries in parallel
             const [ipAnalytics, summary] = await Promise.all([
@@ -1030,7 +1032,8 @@ function startServer() {
                                     { ip: new RegExp(search, 'i') },
                                     { 'location.country': new RegExp(search, 'i') },
                                     { 'location.city': new RegExp(search, 'i') },
-                                    { isp: new RegExp(search, 'i') }
+                                    { isp: new RegExp(search, 'i') },
+                                    { website: new RegExp(search, 'i') }
                                 ]
                             } : {})
                         }
@@ -1156,7 +1159,8 @@ function startServer() {
                                 { ip: new RegExp(search, 'i') },
                                 { 'location.country': new RegExp(search, 'i') },
                                 { 'location.city': new RegExp(search, 'i') },
-                                { isp: new RegExp(search, 'i') }
+                                { isp: new RegExp(search, 'i') },
+                                { website: new RegExp(search, 'i') }
                             ]
                         } : {})
                     }
@@ -1181,6 +1185,7 @@ function startServer() {
                     maxFraudScore,
                     country,
                     isp,
+                    website,
                     isVpn,
                     isProxy,
                     isTor,
@@ -1201,6 +1206,95 @@ function startServer() {
             res.status(500).json({
                 success: false,
                 message: 'Error fetching IP analytics'
+            });
+        }
+    });
+
+    // Map Data endpoint for visitor locations
+    app.get('/api/map-data', apiLimiter, async (req, res) => {
+        try {
+            const timeframe = req.query.timeframe || '24h';
+            const website = req.query.website; // Optional website filter
+            let timeRange;
+            
+            switch (timeframe) {
+                case '1h': timeRange = new Date(Date.now() - 60 * 60 * 1000); break;
+                case '6h': timeRange = new Date(Date.now() - 6 * 60 * 60 * 1000); break;
+                case '24h': timeRange = new Date(Date.now() - 24 * 60 * 60 * 1000); break;
+                case '7d': timeRange = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); break;
+                default: timeRange = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            }
+
+            const matchConditions = { 
+                timestamp: { $gte: timeRange },
+                lat: { $exists: true, $ne: null, $ne: 0 },
+                lon: { $exists: true, $ne: null, $ne: 0 }
+            };
+            
+            if (website) {
+                matchConditions.website = new RegExp(website, 'i');
+            }
+
+            const mapData = await Visit.aggregate([
+                { $match: matchConditions },
+                {
+                    $group: {
+                        _id: {
+                            lat: { $round: ['$lat', 2] }, // Round to 2 decimal places for clustering
+                            lon: { $round: ['$lon', 2] }
+                        },
+                        count: { $sum: 1 },
+                        uniqueIPs: { $addToSet: '$ip' },
+                        countries: { $addToSet: '$country' },
+                        cities: { $addToSet: '$city' },
+                        websites: { $addToSet: '$website' },
+                        isVpn: { $max: '$isVpn' },
+                        isProxy: { $max: '$isProxy' },
+                        isTor: { $max: '$isTor' },
+                        lastVisit: { $max: '$timestamp' }
+                    }
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        lat: '$_id.lat',
+                        lon: '$_id.lon',
+                        count: 1,
+                        uniqueVisitors: { $size: '$uniqueIPs' },
+                        countries: 1,
+                        cities: 1,
+                        websites: 1,
+                        isVpn: 1,
+                        isProxy: 1,
+                        isTor: 1,
+                        lastVisit: 1,
+                        riskLevel: {
+                            $switch: {
+                                branches: [
+                                    { case: '$isTor', then: 'HIGH' },
+                                    { case: { $or: ['$isVpn', '$isProxy'] }, then: 'MEDIUM' }
+                                ],
+                                default: 'LOW'
+                            }
+                        }
+                    }
+                },
+                { $sort: { count: -1 } },
+                { $limit: 1000 } // Limit to prevent too many markers
+            ]);
+
+            res.json({
+                success: true,
+                timeframe,
+                website,
+                data: mapData
+            });
+
+        } catch (error) {
+            console.error('Map data error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Error fetching map data'
             });
         }
     });
