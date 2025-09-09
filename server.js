@@ -158,6 +158,15 @@ function startServer() {
         visitType: { type: String, enum: ['external', 'direct', 'internal'], default: 'direct' },
         isFirstVisit: { type: Boolean, default: true },
         
+        // Enhanced source tracking
+        sourceType: { type: String, enum: ['direct', 'search', 'social', 'external', 'internal', 'unknown'], default: 'direct', index: true },
+        sourceName: String,
+        sourceCategory: String,
+        browser: String,
+        browserVersion: String,
+        os: String,
+        refererDomain: String,
+        
         timestamp: { type: Date, default: Date.now, index: true }
     });
 
@@ -165,6 +174,9 @@ function startServer() {
     visitSchema.index({ timestamp: -1, website: 1 });
     visitSchema.index({ ip: 1, website: 1, timestamp: -1 });
     visitSchema.index({ sessionId: 1, timestamp: -1 });
+    visitSchema.index({ sourceType: 1, timestamp: -1 });
+    visitSchema.index({ browser: 1, timestamp: -1 });
+    visitSchema.index({ os: 1, timestamp: -1 });
 
     const sessionSchema = new mongoose.Schema({
         sessionId: { type: String, required: true, unique: true },
@@ -232,6 +244,149 @@ function startServer() {
             return [...searchEngines, ...socialMedia].some(site => hostname.includes(site));
         } catch (error) {
             return false;
+        }
+    }
+
+    function detectBrowserInfo(userAgent) {
+        if (!userAgent) return { browser: 'Unknown', browserVersion: 'Unknown', os: 'Unknown' };
+        
+        const ua = userAgent.toLowerCase();
+        
+        // Browser detection
+        let browser = 'Unknown';
+        let browserVersion = 'Unknown';
+        
+        if (ua.includes('chrome') && !ua.includes('edg')) {
+            browser = 'Chrome';
+            const match = ua.match(/chrome\/(\d+\.\d+)/);
+            if (match) browserVersion = match[1];
+        } else if (ua.includes('firefox')) {
+            browser = 'Firefox';
+            const match = ua.match(/firefox\/(\d+\.\d+)/);
+            if (match) browserVersion = match[1];
+        } else if (ua.includes('safari') && !ua.includes('chrome')) {
+            browser = 'Safari';
+            const match = ua.match(/version\/(\d+\.\d+)/);
+            if (match) browserVersion = match[1];
+        } else if (ua.includes('edg')) {
+            browser = 'Edge';
+            const match = ua.match(/edg\/(\d+\.\d+)/);
+            if (match) browserVersion = match[1];
+        } else if (ua.includes('opera') || ua.includes('opr')) {
+            browser = 'Opera';
+            const match = ua.match(/(?:opera|opr)\/(\d+\.\d+)/);
+            if (match) browserVersion = match[1];
+        }
+        
+        // OS detection
+        let os = 'Unknown';
+        if (ua.includes('windows')) {
+            os = 'Windows';
+        } else if (ua.includes('mac')) {
+            os = 'macOS';
+        } else if (ua.includes('linux')) {
+            os = 'Linux';
+        } else if (ua.includes('android')) {
+            os = 'Android';
+        } else if (ua.includes('ios') || ua.includes('iphone') || ua.includes('ipad')) {
+            os = 'iOS';
+        }
+        
+        return { browser, browserVersion, os };
+    }
+
+    function getDetailedSourceInfo(referer, userAgent) {
+        const browserInfo = detectBrowserInfo(userAgent);
+        
+        if (!referer) {
+            return {
+                sourceType: 'direct',
+                sourceName: 'Direct',
+                sourceCategory: 'Direct Traffic',
+                browser: browserInfo.browser,
+                browserVersion: browserInfo.browserVersion,
+                os: browserInfo.os,
+                refererDomain: null
+            };
+        }
+        
+        try {
+            const refererUrl = new URL(referer);
+            const refererDomain = refererUrl.hostname.toLowerCase();
+            
+            // Search engines
+            const searchEngines = {
+                'google': 'Google',
+                'bing': 'Bing',
+                'yahoo': 'Yahoo',
+                'duckduckgo': 'DuckDuckGo',
+                'baidu': 'Baidu',
+                'yandex': 'Yandex'
+            };
+            
+            // Social media
+            const socialMedia = {
+                'facebook': 'Facebook',
+                'twitter': 'Twitter',
+                'linkedin': 'LinkedIn',
+                'instagram': 'Instagram',
+                'youtube': 'YouTube',
+                'tiktok': 'TikTok',
+                'pinterest': 'Pinterest',
+                'reddit': 'Reddit'
+            };
+            
+            // Check for search engines
+            for (const [key, name] of Object.entries(searchEngines)) {
+                if (refererDomain.includes(key)) {
+                    return {
+                        sourceType: 'search',
+                        sourceName: name,
+                        sourceCategory: 'Search Engine',
+                        browser: browserInfo.browser,
+                        browserVersion: browserInfo.browserVersion,
+                        os: browserInfo.os,
+                        refererDomain: refererDomain
+                    };
+                }
+            }
+            
+            // Check for social media
+            for (const [key, name] of Object.entries(socialMedia)) {
+                if (refererDomain.includes(key)) {
+                    return {
+                        sourceType: 'social',
+                        sourceName: name,
+                        sourceCategory: 'Social Media',
+                        browser: browserInfo.browser,
+                        browserVersion: browserInfo.browserVersion,
+                        os: browserInfo.os,
+                        refererDomain: refererDomain
+                    };
+                }
+            }
+            
+            // Other external sources
+            return {
+                sourceType: 'external',
+                sourceName: refererDomain,
+                sourceCategory: 'External Website',
+                browser: browserInfo.browser,
+                browserVersion: browserInfo.browserVersion,
+                os: browserInfo.os,
+                refererDomain: refererDomain
+            };
+            
+        } catch (error) {
+            return {
+                sourceType: 'unknown',
+                sourceName: 'Unknown',
+                sourceCategory: 'Unknown',
+                browser: browserInfo.browser,
+                browserVersion: browserInfo.browserVersion,
+                os: browserInfo.os,
+                refererDomain: null
+            };
         }
     }
 
@@ -530,6 +685,7 @@ function startServer() {
             );
 
             const finalVisitType = getVisitType(referer, website);
+            const sourceInfo = getDetailedSourceInfo(referer, userAgent);
 
             // Enhanced tracking logic
             let shouldTrack = false;
@@ -598,7 +754,8 @@ function startServer() {
                 visitType: finalVisitType,
                 isFirstVisit: isNewSession,
                 ...locationData,
-                ...vpnData
+                ...vpnData,
+                ...sourceInfo
             };
 
             // Save visit and update session in parallel
@@ -624,6 +781,11 @@ function startServer() {
                     isVpn: vpnData.isVpn,
                     sessionId: session.sessionId,
                     visitType: finalVisitType,
+                    sourceType: sourceInfo.sourceType,
+                    sourceName: sourceInfo.sourceName,
+                    sourceCategory: sourceInfo.sourceCategory,
+                    browser: sourceInfo.browser,
+                    os: sourceInfo.os,
                     timestamp: new Date()
                 });
             });
@@ -691,6 +853,10 @@ function startServer() {
                             country: { $first: '$country' },
                             city: { $first: '$city' },
                             isVpn: { $first: '$isVpn' },
+                            sourceType: { $first: '$sourceType' },
+                            sourceName: { $first: '$sourceName' },
+                            browser: { $first: '$browser' },
+                            os: { $first: '$os' },
                             lastVisit: { $max: '$timestamp' }
                         }
                     },
@@ -702,6 +868,10 @@ function startServer() {
                             country: 1,
                             city: 1,
                             isVpn: 1,
+                            sourceType: 1,
+                            sourceName: 1,
+                            browser: 1,
+                            os: 1,
                             lastVisit: 1
                         }
                     },
@@ -1031,6 +1201,105 @@ function startServer() {
             res.status(500).json({
                 success: false,
                 message: 'Error fetching IP analytics'
+            });
+        }
+    });
+
+    // Source Analytics endpoint
+    app.get('/api/source-analytics', apiLimiter, async (req, res) => {
+        try {
+            const timeframe = req.query.timeframe || '24h';
+            let timeRange;
+            switch (timeframe) {
+                case '1h': timeRange = new Date(Date.now() - 60 * 60 * 1000); break;
+                case '6h': timeRange = new Date(Date.now() - 6 * 60 * 60 * 1000); break;
+                case '24h': timeRange = new Date(Date.now() - 24 * 60 * 60 * 1000); break;
+                case '7d': timeRange = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); break;
+                default: timeRange = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            }
+
+            const [sourceStats, browserStats, osStats] = await Promise.all([
+                // Source type statistics
+                Visit.aggregate([
+                    { $match: { timestamp: { $gte: timeRange } } },
+                    {
+                        $group: {
+                            _id: '$sourceType',
+                            count: { $sum: 1 },
+                            uniqueIPs: { $addToSet: '$ip' },
+                            sources: { $addToSet: '$sourceName' }
+                        }
+                    },
+                    {
+                        $project: {
+                            sourceType: '$_id',
+                            count: 1,
+                            uniqueIPs: { $size: '$uniqueIPs' },
+                            sources: 1
+                        }
+                    },
+                    { $sort: { count: -1 } }
+                ]),
+
+                // Browser statistics
+                Visit.aggregate([
+                    { $match: { timestamp: { $gte: timeRange }, browser: { $exists: true, $ne: null } } },
+                    {
+                        $group: {
+                            _id: '$browser',
+                            count: { $sum: 1 },
+                            uniqueIPs: { $addToSet: '$ip' },
+                            versions: { $addToSet: '$browserVersion' }
+                        }
+                    },
+                    {
+                        $project: {
+                            browser: '$_id',
+                            count: 1,
+                            uniqueIPs: { $size: '$uniqueIPs' },
+                            versions: 1
+                        }
+                    },
+                    { $sort: { count: -1 } },
+                    { $limit: 10 }
+                ]),
+
+                // OS statistics
+                Visit.aggregate([
+                    { $match: { timestamp: { $gte: timeRange }, os: { $exists: true, $ne: null } } },
+                    {
+                        $group: {
+                            _id: '$os',
+                            count: { $sum: 1 },
+                            uniqueIPs: { $addToSet: '$ip' }
+                        }
+                    },
+                    {
+                        $project: {
+                            os: '$_id',
+                            count: 1,
+                            uniqueIPs: { $size: '$uniqueIPs' }
+                        }
+                    },
+                    { $sort: { count: -1 } }
+                ])
+            ]);
+
+            res.json({
+                success: true,
+                timeframe,
+                data: {
+                    sourceStats,
+                    browserStats,
+                    osStats
+                }
+            });
+
+        } catch (error) {
+            console.error('Source analytics error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Error fetching source analytics'
             });
         }
     });
